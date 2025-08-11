@@ -1,21 +1,18 @@
+
 import os
 from typing import Optional, Union
-
 import torch
-from omegaconf import OmegaConf
+from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
+from huggingface_hub import hf_hub_download, snapshot_download
+from omegaconf import OmegaConf
+from omegaconf.dictconfig import DictConfig
 
 from .models.dit import get_dit
 from .models.text_embedders import get_text_embedder
 from .models.vae import build_vae
 from .models.parallelize import parallelize_dit
-
-from omegaconf.dictconfig import DictConfig
-from huggingface_hub import hf_hub_download, snapshot_download
-
 from .t2v_pipeline import Kandinsky5T2VPipeline
-
-from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
 
 def get_T2V_pipeline(
@@ -61,19 +58,19 @@ def get_T2V_pipeline(
         vae_path = snapshot_download(
             repo_id="hunyuanvideo-community/HunyuanVideo", allow_patterns='vae/*', local_dir=cache_dir
         ) 
-        vae_path = os.path.join(cache_dir, f"vae/")
+        vae_path = os.path.join(cache_dir, "vae/")
 
     if text_encoder_path is None:
         text_encoder_path = snapshot_download(
-            repo_id="Qwen/Qwen2.5-VL-7B-Instruct", local_dir=os.path.join(cache_dir, f"text_encoder/")
+            repo_id="Qwen/Qwen2.5-VL-7B-Instruct", local_dir=os.path.join(cache_dir, "text_encoder/")
         ) 
-        text_encoder_path = os.path.join(cache_dir, f"text_encoder/")
+        text_encoder_path = os.path.join(cache_dir, "text_encoder/")
 
     if text_encoder2_path is None:
         text_encoder2_path = snapshot_download(
-            repo_id="openai/clip-vit-large-patch14", local_dir=os.path.join(cache_dir, f"text_encoder2/")
+            repo_id="openai/clip-vit-large-patch14", local_dir=os.path.join(cache_dir, "text_encoder2/")
         ) 
-        text_encoder2_path = os.path.join(cache_dir, f"text_encoder2/")
+        text_encoder2_path = os.path.join(cache_dir, "text_encoder2/")
         
     if conf_path is None:
         conf = get_default_conf(dit_path, vae_path, text_encoder_path, text_encoder2_path)

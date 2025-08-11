@@ -1,13 +1,11 @@
-import time
 import math
 
 import torch
 from torch import nn
 from flash_attn import flash_attn_varlen_qkvpacked_func, flash_attn_varlen_func
 
-from .utils import exist, get_freqs
+from .utils import get_freqs
 from torch.nn.attention.flex_attention import flex_attention
-from flash_attn import flash_attn_func
 from .utils import nablaT_v2_doc, nablaT_v2_doc_mfcausal
 try:
     import flash_attn_interface
@@ -44,7 +42,6 @@ class TimeEmbeddings(nn.Module):
         self.model_dim = model_dim
         self.max_period = max_period
         self.register_buffer('freqs', get_freqs(model_dim // 2, max_period), persistent=False)
-        
         self.in_layer = nn.Linear(model_dim, time_dim, bias=True)
         self.activation = nn.SiLU()
         self.out_layer = nn.Linear(time_dim, time_dim, bias=True)
@@ -54,7 +51,9 @@ class TimeEmbeddings(nn.Module):
         args = torch.outer(time, self.freqs.to(device=time.device))
         time_embed = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
         time_embed = self.out_layer(self.activation(self.in_layer(time_embed)))
-        time_embed_idx = torch.arange(time_embed.shape[0], device=time_embed.device, dtype=torch.int32)
+        time_embed_idx = torch.arange(
+            time_embed.shape[0], device=time_embed.device, dtype=torch.int32
+            )
         return time_embed, time_embed_idx
 
 
@@ -82,7 +81,9 @@ class VisualEmbeddings(nn.Module):
             idxs = torch.ones(x.shape[0], dtype=torch.int32, device=visual_cu_seqlens.device)
             idxs[visual_cu_seqlens[:-1]] += self.patch_size[0] - 1
             x = torch.repeat_interleave(x, idxs, dim=0)
-            visual_cu_seqlens = visual_cu_seqlens + torch.arange(visual_cu_seqlens.shape[0], device=visual_cu_seqlens.device, dtype=torch.int32)
+            visual_cu_seqlens = visual_cu_seqlens + torch.arange(
+                visual_cu_seqlens.shape[0], device=visual_cu_seqlens.device, dtype=torch.int32
+                )
 
         duration, height, width, dim = x.shape
         x = x.view(
@@ -92,10 +93,10 @@ class VisualEmbeddings(nn.Module):
         ).permute(0, 2, 4, 1, 3, 5, 6).flatten(3, 6)
         visual_cu_seqlens = visual_cu_seqlens // self.patch_size[0]
         return self.in_layer(x), visual_cu_seqlens
-        
+
 
 class RoPE1D(nn.Module):
-  
+
     def __init__(self, dim, max_pos=1024, max_period=10000.):
         super().__init__()
         self.max_period = max_period
@@ -108,13 +109,15 @@ class RoPE1D(nn.Module):
     @torch.autocast(device_type="cuda", enabled=False)
     def forward(self, pos):
         args = self.args[pos]
-        rope = torch.stack([torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1)
+        rope = torch.stack(
+            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1
+            )
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
 
 class RoPE3D(nn.Module):
-  
+
     def __init__(self, axes_dims, max_pos=(128, 128, 128), max_period=10000.):
         super().__init__()
         self.axes_dims = axes_dims
@@ -138,7 +141,9 @@ class RoPE3D(nn.Module):
             args_h.view(1, height, 1, -1).repeat(duration, 1, width, 1),
             args_w.view(1, 1, width, -1).repeat(duration, height, 1, 1)
         ], dim=-1)
-        rope = torch.stack([torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1)
+        rope = torch.stack(
+            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1
+            )
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
@@ -169,7 +174,7 @@ class MultiheadSelfAttention(nn.Module):
         self.to_value = nn.Linear(num_channels, num_channels, bias=True)
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
-        
+
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
     def get_qkv(self, x):
@@ -190,7 +195,7 @@ class MultiheadSelfAttention(nn.Module):
         return q, k
 
     def scaled_dot_product_attention(self, query,key,value, cu_seqlens, return_attn_probs=False):
-        
+
         max_seqlen = torch.diff(cu_seqlens).max()
         if FA3:
             out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
@@ -207,15 +212,18 @@ class MultiheadSelfAttention(nn.Module):
             out, softmax_lse, _ = flash_attn_varlen_qkvpacked_func(
                 query_key_value, cu_seqlens, max_seqlen, return_attn_probs=True
         )
-        
+
         out = out.flatten(-2, -1)
-            
+
         if return_attn_probs:
             return out, softmax_lse, None
         return out
 
-    def attention_flex(self, query, key, value, block_mask, sparse_params=None, return_sparsity=False):
-        
+    def attention_flex(
+            self, query, key, value, block_mask, 
+            sparse_params=None, return_sparsity=False
+            ):
+
         query = query.unsqueeze(0).transpose(1,2).contiguous()
         key = key.unsqueeze(0).transpose(1,2).contiguous()
         value = value.unsqueeze(0).transpose(1,2).contiguous()
@@ -224,16 +232,17 @@ class MultiheadSelfAttention(nn.Module):
             H, W = H // 8, W // 8
             if 'mf' not in sparse_params:
                 block_mask = nablaT_v2_doc(
-                    query, key, sparse_params['visual_seqlens'], T, H, W, 
-                    wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'], 
-                    thr=sparse_params['P'], add_sta=sparse_params['add_sta'], 
+                    query, key, sparse_params['visual_seqlens'], T, H, W,
+                    wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'],
+                    thr=sparse_params['P'], add_sta=sparse_params['add_sta'],
                     method=sparse_params['method']
                 )
             else:
                 block_mask = nablaT_v2_doc_mfcausal(
                      query, key, sparse_params['visual_seqlens'], T, H, W, 
-                     wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'], 
-                     thr=sparse_params['P'], add_sta=sparse_params['add_sta'], mf=sparse_params['mf']
+                     wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'],
+                     thr=sparse_params['P'], add_sta=sparse_params['add_sta'],
+                     mf=sparse_params['mf']
                 )
         out = flex(
             query, key, value,
@@ -241,12 +250,12 @@ class MultiheadSelfAttention(nn.Module):
         ).transpose(1, 2).squeeze(0).contiguous()
         out = out.flatten(-2, -1)
         if return_sparsity:
-            return out, 100.*(1 - (1 - block_mask.sparsity()/100)*(sparse_params['visual_seqlens'].shape[0]-1))
+            return out, 100. * (1 - (1 - block_mask.sparsity() / 100) * (sparse_params['visual_seqlens'].shape[0] - 1))
         return out
 
     def attention_torch(self, query, key, value, torch_mask):
         assert torch_mask.dtype == torch.bool
-        
+
         query = query.unsqueeze(0).contiguous()
         key = key.unsqueeze(0).contiguous()
         value = value.unsqueeze(0).contiguous()
@@ -256,7 +265,7 @@ class MultiheadSelfAttention(nn.Module):
             query, key, value,
             attn_mask=torch_mask,
         ).transpose(1, 2).squeeze(0).contiguous()
-            
+
         out = out.flatten(-2, -1)
         return out
 
@@ -275,7 +284,7 @@ class MultiheadSelfAttention(nn.Module):
 
         out = self.out_layer(out)
         return out
-        
+
 
 class MultiheadCrossAttention(nn.Module):
 
@@ -289,7 +298,7 @@ class MultiheadCrossAttention(nn.Module):
         self.to_value = nn.Linear(num_channels, num_channels, bias=True)
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
-        
+
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
     def get_qkv(self, x, cond):
@@ -309,7 +318,10 @@ class MultiheadCrossAttention(nn.Module):
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    def scaled_dot_product_attention(self, query, key, value, cu_seqlens, cond_cu_seqlens, return_attn_probs=False):
+    def scaled_dot_product_attention(
+            self, query, key, value, 
+            cu_seqlens, cond_cu_seqlens, return_attn_probs=False
+            ):
         max_seqlen = torch.diff(cu_seqlens).max()
         cond_max_seqlen = torch.diff(cond_cu_seqlens).max()
         out, softmax_lse, _ = flash_attn_varlen_func(
@@ -317,7 +329,7 @@ class MultiheadCrossAttention(nn.Module):
             return_attn_probs=True
         )
         out = out.flatten(-2, -1)
-        
+
         if return_attn_probs:
             return out, softmax_lse, None
         return out
@@ -351,7 +363,7 @@ class OutLayer(nn.Module):
         self.modulation = Modulation(time_dim, model_dim, 2)
         self.norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.out_layer = nn.Linear(model_dim, math.prod(patch_size) * visual_dim, bias=True)
-        
+
     def forward(self, visual_embed, text_embed, time_embed, visual_cu_seqlens, time_embed_idx):
         shift, scale = torch.chunk(self.modulation(time_embed), 2, dim=-1)
         visual_embed = apply_scale_shift_norm(
@@ -365,9 +377,11 @@ class OutLayer(nn.Module):
             -1, self.patch_size[0], self.patch_size[1], self.patch_size[2]
         ).permute(0, 4, 1, 5, 2, 6, 3).flatten(0, 1).flatten(1, 2).flatten(2, 3)
         visual_cu_seqlens = visual_cu_seqlens * self.patch_size[0]
-        
+
         if self.patch_size[0] > 1:
-            idxs = torch.ones(duration * self.patch_size[0], dtype=torch.int32, device=visual_cu_seqlens.device)
+            idxs = torch.ones(
+                duration * self.patch_size[0], dtype=torch.int32, device=visual_cu_seqlens.device
+                )
             idxs[visual_cu_seqlens[:-1]] -= self.patch_size[0] - 1
             x = torch.repeat_interleave(x, idxs, dim=0)
         return x

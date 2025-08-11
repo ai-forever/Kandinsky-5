@@ -1,15 +1,10 @@
-from .generation_utils import generate_sample
-
 from typing import Union, List
 
-import PIL
-from PIL import Image
-
-import numpy as np
-from tqdm.auto import tqdm
 import torch
 import torchvision
 from torchvision.transforms import ToPILImage
+
+from .generation_utils import generate_sample
 
 class Kandinsky5T2VPipeline:
     def __init__(
@@ -68,8 +63,6 @@ class Kandinsky5T2VPipeline:
             return_tensors="pt",
         )
         inputs = inputs.to(self.text_embedder.embedder.model.device)
-        
-        # Inference: Generation of the output
         generated_ids = self.text_embedder.embedder.model.generate(**inputs, max_new_tokens=256)
         generated_ids_trimmed = [
             out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -79,7 +72,6 @@ class Kandinsky5T2VPipeline:
         )
         return output_text[0]
 
-    
     def __call__(
             self,
             text: Union[str, List[str]],
@@ -108,7 +100,7 @@ class Kandinsky5T2VPipeline:
             seed = seed.item()
         
         if self.resolution != 512:
-            raise NotImplementedError(f"Only 512 resolution is available for now")  
+            raise NotImplementedError("Only 512 resolution is available for now")  
                     
         if (height, width) not in self.RESOLUTIONS[self.resolution]:
             raise ValueError(f"Wrong height, width pair. Available (height, width) are: {self.RESOLUTIONS[self.resolution]}")
@@ -147,21 +139,19 @@ class Kandinsky5T2VPipeline:
         )       
         torch.cuda.empty_cache()
 
-        # RESULTS 
+        # RESULTS
         if self.local_dit_rank == 0:
             if time_length == 0:
                 return_images = []
-                for i, image in enumerate(images.squeeze(2).cpu()):
+                for image in images.squeeze(2).cpu():
                     return_images.append(ToPILImage()(image))
                 if save_path is not None:
                     if isinstance(save_path, str):
                         save_path = [save_path]
                     if len(save_path) == len(return_images):
                         for path, image in zip(save_path, return_images):
-                            image.save(path) 
-                return return_images  
-
-
+                            image.save(path)
+                return return_images
             else:
                 if save_path is not None:
                     if isinstance(save_path, str):

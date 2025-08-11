@@ -1,15 +1,14 @@
-import math
-
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 from .nn import (
-    TimeEmbeddings, TextEmbeddings, VisualEmbeddings, RoPE1D, RoPE3D, Modulation,
-    MultiheadSelfAttention, MultiheadCrossAttention, FeedForward, OutLayer, apply_scale_shift_norm, apply_gate_sum
+    TimeEmbeddings, TextEmbeddings, VisualEmbeddings, 
+    RoPE1D, RoPE3D, Modulation,
+    MultiheadSelfAttention, MultiheadCrossAttention, 
+    FeedForward, OutLayer, 
+    apply_scale_shift_norm, apply_gate_sum
 )
 from .utils import fractal_flatten, fractal_unflatten
-
 
 class TransformerEncoderBlock(nn.Module):
 
@@ -24,18 +23,20 @@ class TransformerEncoderBlock(nn.Module):
         self.feed_forward = FeedForward(model_dim, ff_dim)
 
     def forward(self, x, time_embed, rope, cu_seqlens, time_embed_idx):
-        self_attn_params, ff_params = torch.chunk(self.text_modulation(time_embed), 2, dim=-1)
-        
+        self_attn_params, ff_params = torch.chunk(self.text_modulation(time_embed), 2, dim=-1)        
         shift, scale, gate = torch.chunk(self_attn_params, 3, dim=-1)
-        out = apply_scale_shift_norm(self.self_attention_norm, x, scale, shift, time_embed_idx).type_as(x)
+        out = apply_scale_shift_norm(
+            self.self_attention_norm, x, scale, shift, time_embed_idx
+            ).type_as(x)
         out = self.self_attention(out, rope, cu_seqlens)
         x = apply_gate_sum(x, out, gate, time_embed_idx).type_as(x)
 
         shift, scale, gate = torch.chunk(ff_params, 3, dim=-1)
-        out = apply_scale_shift_norm(self.feed_forward_norm, x, scale, shift, time_embed_idx).type_as(x)
+        out = apply_scale_shift_norm(
+            self.feed_forward_norm, x, scale, shift, time_embed_idx
+            ).type_as(x)
         out = self.feed_forward(out)
-        x = apply_gate_sum(x, out, gate, time_embed_idx).type_as(x)
-        
+        x = apply_gate_sum(x, out, gate, time_embed_idx).type_as(x)     
         return x
 
 
@@ -54,23 +55,45 @@ class TransformerDecoderBlock(nn.Module):
         self.feed_forward_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.feed_forward = FeedForward(model_dim, ff_dim)
 
-    def forward(self, visual_embed, text_embed, time_embed, rope, visual_cu_seqlens, text_cu_seqlens, time_embed_idx, block_mask, torch_mask, sparse_params):
-        self_attn_params, cross_attn_params, ff_params = torch.chunk(self.visual_modulation(time_embed), 3, dim=-1)
-
+    def forward(
+            self, visual_embed, text_embed, time_embed, 
+            rope, visual_cu_seqlens, text_cu_seqlens, 
+            time_embed_idx, block_mask, torch_mask, sparse_params
+            ):
+        self_attn_params, cross_attn_params, ff_params = torch.chunk(
+            self.visual_modulation(time_embed), 3, dim=-1
+            )
         shift, scale, gate = torch.chunk(self_attn_params, 3, dim=-1)
-        visual_out = apply_scale_shift_norm(self.self_attention_norm, visual_embed, scale, shift, time_embed_idx).type_as(visual_embed)
-        visual_out = self.self_attention(visual_out, rope, visual_cu_seqlens, block_mask, torch_mask, sparse_params)
-        visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx).type_as(visual_embed)
+        visual_out = apply_scale_shift_norm(
+            self.self_attention_norm, visual_embed, 
+            scale, shift, time_embed_idx
+            ).type_as(visual_embed)
+        visual_out = self.self_attention(
+            visual_out, rope, visual_cu_seqlens, block_mask, torch_mask, sparse_params
+            )
+        visual_embed = apply_gate_sum(
+            visual_embed, visual_out, gate, time_embed_idx
+            ).type_as(visual_embed)
 
         shift, scale, gate = torch.chunk(cross_attn_params, 3, dim=-1)
-        visual_out = apply_scale_shift_norm(self.cross_attention_norm, visual_embed, scale, shift, time_embed_idx).type_as(visual_embed)
-        visual_out = self.cross_attention(visual_out, text_embed, visual_cu_seqlens, text_cu_seqlens)
-        visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx).type_as(visual_embed)
+        visual_out = apply_scale_shift_norm(
+            self.cross_attention_norm, visual_embed, scale, shift, time_embed_idx
+            ).type_as(visual_embed)
+        visual_out = self.cross_attention(
+            visual_out, text_embed, visual_cu_seqlens, text_cu_seqlens
+            )
+        visual_embed = apply_gate_sum(
+            visual_embed, visual_out, gate, time_embed_idx
+            ).type_as(visual_embed)
 
         shift, scale, gate = torch.chunk(ff_params, 3, dim=-1)
-        visual_out = apply_scale_shift_norm(self.feed_forward_norm, visual_embed, scale, shift, time_embed_idx).type_as(visual_embed)
+        visual_out = apply_scale_shift_norm(
+            self.feed_forward_norm, visual_embed, scale, shift, time_embed_idx
+            ).type_as(visual_embed)
         visual_out = self.feed_forward(visual_out)
-        visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx).type_as(visual_embed)
+        visual_embed = apply_gate_sum(
+            visual_embed, visual_out, gate, time_embed_idx
+            ).type_as(visual_embed)
 
         return visual_embed
 
@@ -140,9 +163,7 @@ class DiffusionTransformer3D(nn.Module):
             torch_mask = sparse_params["torch_mask"]
         text_embed = self.text_embeddings(text_embed)
         time_embed, time_embed_idx = self.time_embeddings(time)
-        
         time_embed = time_embed + self.pooled_text_embeddings(pooled_text_embed)
-        
         visual_embed, visual_cu_seqlens = self.visual_embeddings(x, visual_cu_seqlens)
 
         text_rope = self.text_rope_embeddings(text_rope_pos)
@@ -155,20 +176,29 @@ class DiffusionTransformer3D(nn.Module):
         visual_shape = visual_embed.shape[:-1]
         visual_rope = self.visual_rope_embeddings(visual_shape, visual_rope_pos, scale_factor)
         to_fractal = sparse_params["to_fractal"] if sparse_params is not None else False
-        visual_embed, visual_rope, visual_cu_seqlens = fractal_flatten(visual_embed, visual_rope, visual_cu_seqlens, visual_shape, block_mask=to_fractal)
-        visual_time_embed_idx = time_embed_idx.repeat_interleave(torch.diff(visual_cu_seqlens), dim=0)
-        
+        visual_embed, visual_rope, visual_cu_seqlens = fractal_flatten(
+            visual_embed, visual_rope, visual_cu_seqlens, visual_shape, block_mask=to_fractal
+            )
+        visual_time_embed_idx = time_embed_idx.repeat_interleave(
+            torch.diff(visual_cu_seqlens), dim=0
+            )
+
         for visual_transformer_block in self.visual_transformer_blocks:
             visual_embed = visual_transformer_block(
-                visual_embed, text_embed, time_embed, visual_rope, visual_cu_seqlens, text_cu_seqlens, visual_time_embed_idx, 
+                visual_embed, text_embed, time_embed,
+                visual_rope, visual_cu_seqlens, text_cu_seqlens,
+                visual_time_embed_idx,
                 block_mask, torch_mask, sparse_params
-            )   
-        visual_embed, visual_cu_seqlens = fractal_unflatten(visual_embed, visual_cu_seqlens, visual_shape, block_mask=to_fractal)
-        
-        
-        visual_time_embed_idx = time_embed_idx.repeat_interleave(torch.diff(visual_cu_seqlens), dim=0)
-        x = self.out_layer(visual_embed, text_embed, time_embed, visual_cu_seqlens, visual_time_embed_idx)
-        
+            )
+        visual_embed, visual_cu_seqlens = fractal_unflatten(
+            visual_embed, visual_cu_seqlens, visual_shape, block_mask=to_fractal
+            )
+        visual_time_embed_idx = time_embed_idx.repeat_interleave(
+            torch.diff(visual_cu_seqlens), dim=0
+            )
+        x = self.out_layer(
+            visual_embed, text_embed, time_embed, visual_cu_seqlens, visual_time_embed_idx
+            )        
         return x
 
 

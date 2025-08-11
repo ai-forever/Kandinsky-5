@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch import nn
 
 from .models.utils import create_doc_causal_mask, fast_doc_causal_sta
 
@@ -17,8 +16,11 @@ def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
         P = 8
         block_mask, _ = fast_doc_causal_sta(
             T, H, W, P, visual_cu_seqlens,
-            conf.model.attention.causal, sta_local=conf.model.attention.local, sta_global=conf.model.attention.glob,
-            return_mask=True, window_size=conf.model.attention.window,
+            conf.model.attention.causal, 
+            sta_local=conf.model.attention.local, 
+            sta_global=conf.model.attention.glob,
+            return_mask=True,
+            window_size=conf.model.attention.window,
         )
         block_mask = block_mask.to(device=device)
         torch_mask = None
@@ -28,21 +30,6 @@ def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
             "attention_type":conf.model.attention.type,
             "to_fractal": True
         }
-    elif conf.model.attention.type == "flex_causal":      
-        hw = H*W
-        seq_rep = torch.repeat_interleave(torch.arange(visual_cu_seqlens.shape[0]-1).to(visual_cu_seqlens.device),torch.diff(visual_cu_seqlens))
-        mask_mod = create_mask(seq_rep, hw)
-
-        block_mask = create_block_mask(mask_mod, None, None, T*hw, T*hw, "cuda", BLOCK_SIZE=128, _compile=True)
-        block_mask = block_mask.to(device=device)
-        torch_mask = None
-        sparse_params = {
-            "block_mask": block_mask,
-            "torch_mask": torch_mask,
-            "attention_type":conf.model.attention.type,
-            "to_fractal": False
-        }
-
     elif conf.model.attention.type == "torch":
         torch_mask = create_doc_causal_mask(
             T, H, W, seq=visual_cu_seqlens, causal=conf.model.attention.causal
@@ -70,24 +57,9 @@ def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
         'visual_seqlens':visual_cu_seqlens,
         'method':getattr(conf.model.attention, 'method', 'topcdf')
     }
-    elif conf.model.attention.type == "nabla_framewise_causal":
-        sparse_params = {
-        "block_mask": None,
-        "torch_mask": None,
-        "attention_type": conf.model.attention.type,
-        "to_fractal": True,
-        'P':conf.model.attention.P,
-        'wT':conf.model.attention.wT,
-        'wW':conf.model.attention.wW,
-        'wH':conf.model.attention.wH,
-        'add_sta':conf.model.attention.add_sta,
-        'mf':conf.model.attention.mf,
-        'visual_shape':(T, H, W),
-        'visual_seqlens':visual_cu_seqlens
-    }
     else:
         sparse_params = None
-    
+
     return sparse_params
 
 
@@ -100,13 +72,13 @@ def get_frame_idx(num_frames, video_len):
     return [(x[0] + x[1]) // 2 for x in ranges]
 
 
-@torch.no_grad()
+@torch.no_grad() 
 def get_velocity(
     dit, x, t, 
     text_embeds, null_text_embeds, 
     visual_cu_seqlens, text_cu_seqlens, null_text_cu_seqlens,
     visual_rope_pos, text_rope_pos, null_text_rope_pos,
-    guidance_weight, conf,  
+    guidance_weight, conf,
     block_mask=None, torch_mask=None,
     sparse_params=None
 ):
@@ -137,7 +109,7 @@ def generate(
     visual_rope_pos, text_rope_pos, null_text_rope_pos,
     guidance_weight, scheduler_scale, conf,
     progress=False, seed=6554
-):                
+):
     g = torch.Generator(device='cuda')
     g.manual_seed(seed)
     img = torch.randn(*shape, device=device, generator=g)
@@ -165,21 +137,20 @@ def generate(
     return img
 
 
-def generate_sample( #TODO: simplify??
+def generate_sample( 
     shape,
     captions,
-    dit,  
+    dit,
     vae,
-    conf, 
+    conf,
     text_embedder,
-    num_steps=25, 
+    num_steps=25,
     guidance_weight=5.,
     scheduler_scale=1,
     negative_caption='',
     seed=6554,
     device="cuda",
     vae_device="cuda"
-    # TODO make for several gpus
 ):
     bs, duration, height, width, dim = shape
     if duration == 1:
@@ -217,13 +188,16 @@ def generate_sample( #TODO: simplify??
                 
     with torch.no_grad():
         with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
-            images = latent_visual.reshape(bs, -1, latent_visual.shape[-3], latent_visual.shape[-2], latent_visual.shape[-1])# bs, t, h, w, c
+            images = latent_visual.reshape(
+                bs, -1, 
+                latent_visual.shape[-3], 
+                latent_visual.shape[-2], 
+                latent_visual.shape[-1]
+                )
             images = images.to(device=vae_device)
-            # shape for decode: bs, c, t, h, w
             images = (images / vae.config.scaling_factor).permute(0, 4, 1, 2, 3)
             images = vae.decode(images).sample
             images = ((images.clamp(-1., 1.) + 1.) * 127.5).to(torch.uint8) 
     torch.cuda.empty_cache()
 
-    return images # shape: bs, 3, t, h, w
-
+    return images
