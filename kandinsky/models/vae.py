@@ -1,40 +1,27 @@
-"""
-ver 0.1:
-    * Fixed OOM for (320, 704), (704, 320), (384, 640), (640, 384) sizes
-    * Accelerated mask creation
-    * Removed mask cache
-"""
-
 import os
 from math import sqrt
-from os import makedirs, listdir
-from os.path import join
 from typing import Optional, Tuple, Union, List
-from omegaconf import OmegaConf
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.utils.checkpoint
 
 from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.utils import logging
 from diffusers.utils.accelerate_utils import apply_forward_hook
 from diffusers.models.activations import get_activation
 from diffusers.models.attention_processor import Attention
 from diffusers.models.modeling_outputs import AutoencoderKLOutput
 from diffusers.models.modeling_utils import ModelMixin
-from diffusers.models.autoencoders.vae import DecoderOutput, DiagonalGaussianDistribution
-from diffusers.models import AutoencoderKL
+from diffusers.models.autoencoders.vae import (
+    DecoderOutput,
+    DiagonalGaussianDistribution,
+)
 
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 torch.backends.cudnn.allow_tf32 = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
-
-
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 OPT_TEMPORAL_TILING = {
     1: (1, 1),
@@ -94,7 +81,7 @@ OPT_TEMPORAL_TILING = {
     229: (21, 16),
     233: (17, 12),
     237: (21, 12),
-    241: (17, 8)
+    241: (17, 8),
 }
 
 OPT_SPATIAL_TILING = {
@@ -116,13 +103,24 @@ OPT_SPATIAL_TILING = {
     1024: (544, 480),
     1152: (608, 544),
     1280: (672, 608),
-    1408: (736, 672)
+    1408: (736, 672),
 }
 
-def prepare_causal_attention_mask(f: int, s: int, dtype: torch.dtype, device: torch.device,
-                                  b: int) -> torch.Tensor:
-    return torch.ones((f, f), dtype=dtype, device=device).tril_().log_().repeat_interleave(s, dim=0)\
-        .repeat_interleave(s, dim=1).unsqueeze(0).expand(b, -1, -1).contiguous()
+
+def prepare_causal_attention_mask(
+    f: int, s: int, dtype: torch.dtype, device: torch.device, b: int
+) -> torch.Tensor:
+    return (
+        torch.ones((f, f), dtype=dtype, device=device)
+        .tril_()
+        .log_()
+        .repeat_interleave(s, dim=0)
+        .repeat_interleave(s, dim=1)
+        .unsqueeze(0)
+        .expand(b, -1, -1)
+        .contiguous()
+    )
+
 
 class HunyuanVideoCausalConv3d(nn.Module):
     def __init__(
@@ -138,7 +136,11 @@ class HunyuanVideoCausalConv3d(nn.Module):
     ) -> None:
         super().__init__()
 
-        kernel_size = (kernel_size, kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+        kernel_size = (
+            (kernel_size, kernel_size, kernel_size)
+            if isinstance(kernel_size, int)
+            else kernel_size
+        )
 
         self.pad_mode = pad_mode
         self.time_causal_padding = (
@@ -150,10 +152,14 @@ class HunyuanVideoCausalConv3d(nn.Module):
             0,
         )
 
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride, padding, dilation, bias=bias)
+        self.conv = nn.Conv3d(
+            in_channels, out_channels, kernel_size, stride, padding, dilation, bias=bias
+        )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        hidden_states = F.pad(hidden_states, self.time_causal_padding, mode=self.pad_mode)
+        hidden_states = F.pad(
+            hidden_states, self.time_causal_padding, mode=self.pad_mode
+        )
         return self.conv(hidden_states)
 
 
@@ -172,25 +178,25 @@ class HunyuanVideoUpsampleCausal3D(nn.Module):
         out_channels = out_channels or in_channels
         self.upsample_factor = upsample_factor
 
-        self.conv = HunyuanVideoCausalConv3d(in_channels, out_channels, kernel_size, stride, bias=bias)
+        self.conv = HunyuanVideoCausalConv3d(
+            in_channels, out_channels, kernel_size, stride, bias=bias
+        )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         num_frames = hidden_states.size(2)
 
         first_frame, other_frames = hidden_states.split((1, num_frames - 1), dim=2)
         first_frame = F.interpolate(
-            first_frame.squeeze(2), scale_factor=self.upsample_factor[1:], mode="nearest"
+            first_frame.squeeze(2),
+            scale_factor=self.upsample_factor[1:],
+            mode="nearest",
         ).unsqueeze(2)
 
         if num_frames > 1:
-            # See: https://github.com/pytorch/pytorch/issues/81665
-            # Unless you have a version of pytorch where non-contiguous implementation of F.interpolate
-            # is fixed, this will raise either a runtime error, or fail silently with bad outputs.
-            # If you are encountering an error here, make sure to try running encoding/decoding with
-            # `vae.enable_tiling()` first. If that doesn't work, open an issue at:
-            # https://github.com/huggingface/diffusers/issues
             other_frames = other_frames.contiguous()
-            other_frames = F.interpolate(other_frames, scale_factor=self.upsample_factor, mode="nearest")
+            other_frames = F.interpolate(
+                other_frames, scale_factor=self.upsample_factor, mode="nearest"
+            )
             hidden_states = torch.cat((first_frame, other_frames), dim=2)
         else:
             hidden_states = first_frame
@@ -212,7 +218,9 @@ class HunyuanVideoDownsampleCausal3D(nn.Module):
         super().__init__()
         out_channels = out_channels or channels
 
-        self.conv = HunyuanVideoCausalConv3d(channels, out_channels, kernel_size, stride, padding, bias=bias)
+        self.conv = HunyuanVideoCausalConv3d(
+            channels, out_channels, kernel_size, stride, padding, bias=bias
+        )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         hidden_states = self.conv(hidden_states)
@@ -243,7 +251,9 @@ class HunyuanVideoResnetBlockCausal3D(nn.Module):
 
         self.conv_shortcut = None
         if in_channels != out_channels:
-            self.conv_shortcut = HunyuanVideoCausalConv3d(in_channels, out_channels, 1, 1, 0)
+            self.conv_shortcut = HunyuanVideoCausalConv3d(
+                in_channels, out_channels, 1, 1, 0
+            )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         hidden_states = hidden_states.contiguous()
@@ -278,7 +288,9 @@ class HunyuanVideoMidBlock3D(nn.Module):
         attention_head_dim: int = 1,
     ) -> None:
         super().__init__()
-        resnet_groups = resnet_groups if resnet_groups is not None else min(in_channels // 4, 32)
+        resnet_groups = (
+            resnet_groups if resnet_groups is not None else min(in_channels // 4, 32)
+        )
         self.add_attention = add_attention
 
         # There is always at least one resnet
@@ -331,13 +343,19 @@ class HunyuanVideoMidBlock3D(nn.Module):
 
         for attn, resnet in zip(self.attentions, self.resnets[1:]):
             if attn is not None:
-                batch_size, num_channels, num_frames, height, width = hidden_states.shape
+                batch_size, _, num_frames, height, width = hidden_states.shape
                 hidden_states = hidden_states.permute(0, 2, 3, 4, 1).flatten(1, 3)
                 mask = prepare_causal_attention_mask(
-                    num_frames, height * width, hidden_states.dtype, hidden_states.device, batch_size
+                    num_frames,
+                    height * width,
+                    hidden_states.dtype,
+                    hidden_states.device,
+                    batch_size,
                 )
                 hidden_states = attn(hidden_states, attention_mask=mask)
-                hidden_states = hidden_states.unflatten(1, (num_frames, height, width)).permute(0, 4, 1, 2, 3)
+                hidden_states = hidden_states.unflatten(
+                    1, (num_frames, height, width)
+                ).permute(0, 4, 1, 2, 3)
 
             hidden_states = resnet(hidden_states)
 
@@ -459,7 +477,8 @@ class HunyuanVideoUpBlock3D(nn.Module):
 
 class HunyuanVideoEncoder3D(nn.Module):
     r"""
-    Causal encoder for 3D video-like data introduced in [Hunyuan Video](https://huggingface.co/papers/2412.03603).
+    Causal encoder for 3D video-like data introduced
+    in [Hunyuan Video](https://huggingface.co/papers/2412.03603).
     """
 
     def __init__(
@@ -483,7 +502,9 @@ class HunyuanVideoEncoder3D(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.conv_in = HunyuanVideoCausalConv3d(in_channels, block_out_channels[0], kernel_size=3, stride=1)
+        self.conv_in = HunyuanVideoCausalConv3d(
+            in_channels, block_out_channels[0], kernel_size=3, stride=1
+        )
         self.mid_block = None
         self.down_blocks = nn.ModuleList([])
 
@@ -501,13 +522,16 @@ class HunyuanVideoEncoder3D(nn.Module):
             if temporal_compression_ratio == 4:
                 add_spatial_downsample = bool(i < num_spatial_downsample_layers)
                 add_time_downsample = bool(
-                    i >= (len(block_out_channels) - 1 - num_time_downsample_layers) and not is_final_block
+                    i >= (len(block_out_channels) - 1 - num_time_downsample_layers)
+                    and not is_final_block
                 )
             elif temporal_compression_ratio == 8:
                 add_spatial_downsample = bool(i < num_spatial_downsample_layers)
                 add_time_downsample = bool(i < num_time_downsample_layers)
             else:
-                raise ValueError(f"Unsupported time_compression_ratio: {temporal_compression_ratio}")
+                raise ValueError(
+                    f"Unsupported time_compression_ratio: {temporal_compression_ratio}"
+                )
 
             downsample_stride_HW = (2, 2) if add_spatial_downsample else (1, 1)
             downsample_stride_T = (2,) if add_time_downsample else (1,)
@@ -536,11 +560,15 @@ class HunyuanVideoEncoder3D(nn.Module):
             add_attention=mid_block_add_attention,
         )
 
-        self.conv_norm_out = nn.GroupNorm(num_channels=block_out_channels[-1], num_groups=norm_num_groups, eps=1e-6)
+        self.conv_norm_out = nn.GroupNorm(
+            num_channels=block_out_channels[-1], num_groups=norm_num_groups, eps=1e-6
+        )
         self.conv_act = nn.SiLU()
 
         conv_out_channels = 2 * out_channels if double_z else out_channels
-        self.conv_out = HunyuanVideoCausalConv3d(block_out_channels[-1], conv_out_channels, kernel_size=3)
+        self.conv_out = HunyuanVideoCausalConv3d(
+            block_out_channels[-1], conv_out_channels, kernel_size=3
+        )
 
     # @torch.compile(dynamic=True)
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -560,7 +588,8 @@ class HunyuanVideoEncoder3D(nn.Module):
 
 class HunyuanVideoDecoder3D(nn.Module):
     r"""
-    Causal decoder for 3D video-like data introduced in [Hunyuan Video](https://huggingface.co/papers/2412.03603).
+    Causal decoder for 3D video-like data introduced
+    in [Hunyuan Video](https://huggingface.co/papers/2412.03603).
     """
 
     def __init__(
@@ -584,7 +613,9 @@ class HunyuanVideoDecoder3D(nn.Module):
         super().__init__()
         self.layers_per_block = layers_per_block
 
-        self.conv_in = HunyuanVideoCausalConv3d(in_channels, block_out_channels[-1], kernel_size=3, stride=1)
+        self.conv_in = HunyuanVideoCausalConv3d(
+            in_channels, block_out_channels[-1], kernel_size=3, stride=1
+        )
         self.up_blocks = nn.ModuleList([])
 
         # mid
@@ -613,14 +644,19 @@ class HunyuanVideoDecoder3D(nn.Module):
             if time_compression_ratio == 4:
                 add_spatial_upsample = bool(i < num_spatial_upsample_layers)
                 add_time_upsample = bool(
-                    i >= len(block_out_channels) - 1 - num_time_upsample_layers and not is_final_block
+                    i >= len(block_out_channels) - 1 - num_time_upsample_layers
+                    and not is_final_block
                 )
             else:
-                raise ValueError(f"Unsupported time_compression_ratio: {time_compression_ratio}")
+                raise ValueError(
+                    f"Unsupported time_compression_ratio: {time_compression_ratio}"
+                )
 
             upsample_scale_factor_HW = (2, 2) if add_spatial_upsample else (1, 1)
             upsample_scale_factor_T = (2,) if add_time_upsample else (1,)
-            upsample_scale_factor = tuple(upsample_scale_factor_T + upsample_scale_factor_HW)
+            upsample_scale_factor = tuple(
+                upsample_scale_factor_T + upsample_scale_factor_HW
+            )
 
             up_block = HunyuanVideoUpBlock3D(
                 num_layers=self.layers_per_block + 1,
@@ -637,11 +673,14 @@ class HunyuanVideoDecoder3D(nn.Module):
             prev_output_channel = output_channel
 
         # out
-        self.conv_norm_out = nn.GroupNorm(num_channels=block_out_channels[0], num_groups=norm_num_groups, eps=1e-6)
+        self.conv_norm_out = nn.GroupNorm(
+            num_channels=block_out_channels[0], num_groups=norm_num_groups, eps=1e-6
+        )
         self.conv_act = nn.SiLU()
-        self.conv_out = HunyuanVideoCausalConv3d(block_out_channels[0], out_channels, kernel_size=3)
+        self.conv_out = HunyuanVideoCausalConv3d(
+            block_out_channels[0], out_channels, kernel_size=3
+        )
 
-    # @torch.compile(dynamic=True)
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         hidden_states = self.conv_in(hidden_states)
 
@@ -650,7 +689,6 @@ class HunyuanVideoDecoder3D(nn.Module):
         for up_block in self.up_blocks:
             hidden_states = up_block(hidden_states)
 
-        # post-process
         hidden_states = self.conv_norm_out(hidden_states)
         hidden_states = self.conv_act(hidden_states)
         hidden_states = self.conv_out(hidden_states)
@@ -660,10 +698,12 @@ class HunyuanVideoDecoder3D(nn.Module):
 
 class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
     r"""
-    A VAE model with KL loss for encoding videos into latents and decoding latent representations into videos.
+    A VAE model with KL loss for encoding videos into latents
+    and decoding latent representations into videos.
     Introduced in [HunyuanVideo](https://huggingface.co/papers/2412.03603).
 
-    This model inherits from [`ModelMixin`]. Check the superclass documentation for it's generic methods implemented
+    This model inherits from [`ModelMixin`]. Check the superclass
+    documentation for it's generic methods implemented
     for all models (such as downloading or saving).
     """
 
@@ -725,32 +765,27 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
             mid_block_add_attention=mid_block_add_attention,
         )
 
-        self.quant_conv = nn.Conv3d(2 * latent_channels, 2 * latent_channels, kernel_size=1)
-        self.post_quant_conv = nn.Conv3d(latent_channels, latent_channels, kernel_size=1)
+        self.quant_conv = nn.Conv3d(
+            2 * latent_channels, 2 * latent_channels, kernel_size=1
+        )
+        self.post_quant_conv = nn.Conv3d(
+            latent_channels, latent_channels, kernel_size=1
+        )
 
         self.spatial_compression_ratio = spatial_compression_ratio
         self.temporal_compression_ratio = temporal_compression_ratio
 
-        # When decoding a batch of video latents at a time, one can save memory by slicing across the batch dimension
-        # to perform decoding of a single video latent at a time.
         self.use_slicing = False
 
-        # When decoding spatially large video latents, the memory requirement is very high. By breaking the video latent
-        # frames spatially into smaller tiles and performing multiple forward passes for decoding, and then blending the
-        # intermediate tiles together, the memory requirement can be lowered.
         self.use_tiling = True
 
-        # When decoding temporally long video latents, the memory requirement is very high. By decoding latent frames
-        # at a fixed frame batch size (based on `self.num_latent_frames_batch_sizes`), the memory requirement can be lowered.
         self.use_framewise_encoding = True
         self.use_framewise_decoding = True
 
-        # The minimal tile height and width for spatial tiling to be used
         self.tile_sample_min_height = 256
         self.tile_sample_min_width = 256
         self.tile_sample_min_num_frames = 16
 
-        # The minimal distance between two spatial tiles
         self.tile_sample_stride_height = 192
         self.tile_sample_stride_width = 192
         self.tile_sample_stride_num_frames = 12
@@ -758,12 +793,16 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         self.tile_size = None
 
     def _encode(self, x: torch.Tensor) -> torch.Tensor:
-        batch_size, num_channels, num_frames, height, width = x.shape
+        _, _, num_frames, height, width = x.shape
 
-        if self.use_framewise_decoding and num_frames > (self.tile_sample_min_num_frames + 1):
+        if self.use_framewise_decoding and num_frames > (
+            self.tile_sample_min_num_frames + 1
+        ):
             return self._temporal_tiled_encode(x)
 
-        if self.use_tiling and (width > self.tile_sample_min_width or height > self.tile_sample_min_height):
+        if self.use_tiling and (
+            width > self.tile_sample_min_width or height > self.tile_sample_min_height
+        ):
             return self.tiled_encode(x)
 
         x = self.encoder(x)
@@ -771,19 +810,22 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         return enc
 
     @apply_forward_hook
-    def encode(self, x: torch.Tensor, opt_tiling: bool = True, return_dict: bool = True
-                ) -> Union[AutoencoderKLOutput, Tuple[DiagonalGaussianDistribution]]:
+    def encode(
+        self, x: torch.Tensor, opt_tiling: bool = True, return_dict: bool = True
+    ) -> Union[AutoencoderKLOutput, Tuple[DiagonalGaussianDistribution]]:
         r"""
         Encode a batch of images into latents.
 
         Args:
             x (`torch.Tensor`): Input batch of images.
             return_dict (`bool`, *optional*, defaults to `True`):
-                Whether to return a [`~models.autoencoder_kl.AutoencoderKLOutput`] instead of a plain tuple.
+                Whether to return a [`~models.autoencoder_kl.AutoencoderKLOutput`]
+                instead of a plain tuple.
 
         Returns:
                 The latent representations of the encoded videos. If `return_dict` is True, a
-                [`~models.autoencoder_kl.AutoencoderKLOutput`] is returned, otherwise a plain `tuple` is returned.
+                [`~models.autoencoder_kl.AutoencoderKLOutput`] is returned,
+                otherwise a plain `tuple` is returned.
         """
         if opt_tiling:
             tile_size, tile_stride = self.get_enc_optimal_tiling(x.shape)
@@ -802,16 +844,28 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
             return (posterior,)
         return AutoencoderKLOutput(latent_dist=posterior)
 
-    def _decode(self, z: torch.Tensor, return_dict: bool = True) -> Union[DecoderOutput, torch.Tensor]:
-        batch_size, num_channels, num_frames, height, width = z.shape
-        tile_latent_min_height = self.tile_sample_min_height // self.spatial_compression_ratio
-        tile_latent_min_width = self.tile_sample_stride_width // self.spatial_compression_ratio
-        tile_latent_min_num_frames = self.tile_sample_min_num_frames // self.temporal_compression_ratio
+    def _decode(
+        self, z: torch.Tensor, return_dict: bool = True
+    ) -> Union[DecoderOutput, torch.Tensor]:
+        _, _, num_frames, height, width = z.shape
+        tile_latent_min_height = (
+            self.tile_sample_min_height // self.spatial_compression_ratio
+        )
+        tile_latent_min_width = (
+            self.tile_sample_stride_width // self.spatial_compression_ratio
+        )
+        tile_latent_min_num_frames = (
+            self.tile_sample_min_num_frames // self.temporal_compression_ratio
+        )
 
-        if self.use_framewise_decoding and num_frames > (tile_latent_min_num_frames + 1):
+        if self.use_framewise_decoding and num_frames > (
+            tile_latent_min_num_frames + 1
+        ):
             return self._temporal_tiled_decode(z, return_dict=return_dict)
 
-        if self.use_tiling and (width > tile_latent_min_width or height > tile_latent_min_height):
+        if self.use_tiling and (
+            width > tile_latent_min_width or height > tile_latent_min_height
+        ):
             return self.tiled_decode(z, return_dict=return_dict)
 
         z = self.post_quant_conv(z)
@@ -823,8 +877,9 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         return DecoderOutput(sample=dec)
 
     @apply_forward_hook
-    def decode(self, z: torch.Tensor,
-               return_dict: bool = True) -> Union[DecoderOutput, torch.Tensor]:
+    def decode(
+        self, z: torch.Tensor, return_dict: bool = True
+    ) -> Union[DecoderOutput, torch.Tensor]:
         r"""
         Decode a batch of images.
 
@@ -835,43 +890,49 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
 
         Returns:
             [`~models.vae.DecoderOutput`] or `tuple`:
-                If return_dict is True, a [`~models.vae.DecoderOutput`] is returned, otherwise a plain `tuple` is
-                returned.
+                If return_dict is True, a [`~models.vae.DecoderOutput`] is returned,
+                otherwise a plain `tuple` is returned.
         """
         tile_size, tile_stride = self.get_dec_optimal_tiling(z.shape)
         if tile_size != self.tile_size:
             self.tile_size = tile_size
             self.apply_tiling(tile_size, tile_stride)
 
-        decoded = self._decode(z).sample                
+        decoded = self._decode(z).sample
 
         if not return_dict:
             return (decoded,)
 
         return DecoderOutput(sample=decoded)
 
-    def blend_v(self, a: torch.Tensor, b: torch.Tensor, blend_extent: int) -> torch.Tensor:
+    def blend_v(
+        self, a: torch.Tensor, b: torch.Tensor, blend_extent: int
+    ) -> torch.Tensor:
         blend_extent = min(a.shape[-2], b.shape[-2], blend_extent)
         for y in range(blend_extent):
-            b[:, :, :, y, :] = a[:, :, :, -blend_extent + y, :] * (1 - y / blend_extent) + b[:, :, :, y, :] * (
-                y / blend_extent
-            )
+            b[:, :, :, y, :] = a[:, :, :, -blend_extent + y, :] * (
+                1 - y / blend_extent
+            ) + b[:, :, :, y, :] * (y / blend_extent)
         return b
 
-    def blend_h(self, a: torch.Tensor, b: torch.Tensor, blend_extent: int) -> torch.Tensor:
+    def blend_h(
+        self, a: torch.Tensor, b: torch.Tensor, blend_extent: int
+    ) -> torch.Tensor:
         blend_extent = min(a.shape[-1], b.shape[-1], blend_extent)
         for x in range(blend_extent):
-            b[:, :, :, :, x] = a[:, :, :, :, -blend_extent + x] * (1 - x / blend_extent) + b[:, :, :, :, x] * (
-                x / blend_extent
-            )
+            b[:, :, :, :, x] = a[:, :, :, :, -blend_extent + x] * (
+                1 - x / blend_extent
+            ) + b[:, :, :, :, x] * (x / blend_extent)
         return b
 
-    def blend_t(self, a: torch.Tensor, b: torch.Tensor, blend_extent: int) -> torch.Tensor:
+    def blend_t(
+        self, a: torch.Tensor, b: torch.Tensor, blend_extent: int
+    ) -> torch.Tensor:
         blend_extent = min(a.shape[-3], b.shape[-3], blend_extent)
         for x in range(blend_extent):
-            b[:, :, x, :, :] = a[:, :, -blend_extent + x, :, :] * (1 - x / blend_extent) + b[:, :, x, :, :] * (
-                x / blend_extent
-            )
+            b[:, :, x, :, :] = a[:, :, -blend_extent + x, :, :] * (
+                1 - x / blend_extent
+            ) + b[:, :, x, :, :] * (x / blend_extent)
         return b
 
     def tiled_encode(self, x: torch.Tensor) -> AutoencoderKLOutput:
@@ -884,26 +945,41 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
             `torch.Tensor`:
                 The latent representation of the encoded videos.
         """
-        batch_size, num_channels, num_frames, height, width = x.shape
+        _, _, _, height, width = x.shape
         latent_height = height // self.spatial_compression_ratio
         latent_width = width // self.spatial_compression_ratio
 
-        tile_latent_min_height = self.tile_sample_min_height // self.spatial_compression_ratio
-        tile_latent_min_width = self.tile_sample_min_width // self.spatial_compression_ratio
-        tile_latent_stride_height = self.tile_sample_stride_height // self.spatial_compression_ratio
-        tile_latent_stride_width = self.tile_sample_stride_width // self.spatial_compression_ratio
+        tile_latent_min_height = (
+            self.tile_sample_min_height // self.spatial_compression_ratio
+        )
+        tile_latent_min_width = (
+            self.tile_sample_min_width // self.spatial_compression_ratio
+        )
+        tile_latent_stride_height = (
+            self.tile_sample_stride_height // self.spatial_compression_ratio
+        )
+        tile_latent_stride_width = (
+            self.tile_sample_stride_width // self.spatial_compression_ratio
+        )
 
         blend_height = tile_latent_min_height - tile_latent_stride_height
         blend_width = tile_latent_min_width - tile_latent_stride_width
 
-        # Split x into overlapping tiles and encode them separately.
-        # The tiles have an overlap to avoid seams between tiles.
         rows = []
-        for i in range(0, height - self.tile_sample_min_height + 1, self.tile_sample_stride_height):
+        for i in range(
+            0, height - self.tile_sample_min_height + 1, self.tile_sample_stride_height
+        ):
             row = []
-            for j in range(0, width - self.tile_sample_min_width + 1, self.tile_sample_stride_width):
-                tile = x[:, :, :, i : i + self.tile_sample_min_height, j : j + self.tile_sample_min_width]
-                # print(tile.shape)
+            for j in range(
+                0, width - self.tile_sample_min_width + 1, self.tile_sample_stride_width
+            ):
+                tile = x[
+                    :,
+                    :,
+                    :,
+                    i : i + self.tile_sample_min_height,
+                    j : j + self.tile_sample_min_width,
+                ]
                 tile = self.encoder(tile).clone()
                 tile = self.quant_conv(tile)
                 row.append(tile)
@@ -913,21 +989,29 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         for i, row in enumerate(rows):
             result_row = []
             for j, tile in enumerate(row):
-                # blend the above tile and the left tile
-                # to the current tile and add the current tile to the result row
                 if i > 0:
                     tile = self.blend_v(rows[i - 1][j], tile, blend_height)
                 if j > 0:
                     tile = self.blend_h(row[j - 1], tile, blend_width)
-                height_lim = tile_latent_min_height if i == len(rows) - 1 else tile_latent_stride_height
-                width_lim = tile_latent_min_width if j == len(row) - 1 else tile_latent_stride_width
+                height_lim = (
+                    tile_latent_min_height
+                    if i == len(rows) - 1
+                    else tile_latent_stride_height
+                )
+                width_lim = (
+                    tile_latent_min_width
+                    if j == len(row) - 1
+                    else tile_latent_stride_width
+                )
                 result_row.append(tile[:, :, :, :height_lim, :width_lim])
             result_rows.append(torch.cat(result_row, dim=4))
 
         enc = torch.cat(result_rows, dim=3)[:, :, :, :latent_height, :latent_width]
         return enc
 
-    def tiled_decode(self, z: torch.Tensor, return_dict: bool = True) -> Union[DecoderOutput, torch.Tensor]:
+    def tiled_decode(
+        self, z: torch.Tensor, return_dict: bool = True
+    ) -> Union[DecoderOutput, torch.Tensor]:
         r"""
         Decode a batch of images using a tiled decoder.
 
@@ -938,30 +1022,45 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
 
         Returns:
             [`~models.vae.DecoderOutput`] or `tuple`:
-                If return_dict is True, a [`~models.vae.DecoderOutput`] is returned, otherwise a plain `tuple` is
-                returned.
+                If return_dict is True, a [`~models.vae.DecoderOutput`] is returned,
+                otherwise a plain `tuple` is returned.
         """
 
-        batch_size, num_channels, num_frames, height, width = z.shape
+        _, _, _, height, width = z.shape
         sample_height = height * self.spatial_compression_ratio
         sample_width = width * self.spatial_compression_ratio
 
-        tile_latent_min_height = self.tile_sample_min_height // self.spatial_compression_ratio
-        tile_latent_min_width = self.tile_sample_min_width // self.spatial_compression_ratio
-        tile_latent_stride_height = self.tile_sample_stride_height // self.spatial_compression_ratio
-        tile_latent_stride_width = self.tile_sample_stride_width // self.spatial_compression_ratio
+        tile_latent_min_height = (
+            self.tile_sample_min_height // self.spatial_compression_ratio
+        )
+        tile_latent_min_width = (
+            self.tile_sample_min_width // self.spatial_compression_ratio
+        )
+        tile_latent_stride_height = (
+            self.tile_sample_stride_height // self.spatial_compression_ratio
+        )
+        tile_latent_stride_width = (
+            self.tile_sample_stride_width // self.spatial_compression_ratio
+        )
 
         blend_height = self.tile_sample_min_height - self.tile_sample_stride_height
         blend_width = self.tile_sample_min_width - self.tile_sample_stride_width
 
-        # Split z into overlapping tiles and decode them separately.
-        # The tiles have an overlap to avoid seams between tiles.
         rows = []
-        for i in range(0, height - tile_latent_min_height + 1, tile_latent_stride_height):
+        for i in range(
+            0, height - tile_latent_min_height + 1, tile_latent_stride_height
+        ):
             row = []
-            for j in range(0, width - tile_latent_min_width + 1, tile_latent_stride_width):
-                tile = z[:, :, :, i : i + tile_latent_min_height, j : j + tile_latent_min_width]
-                #print(tile.shape) # TODO Remove
+            for j in range(
+                0, width - tile_latent_min_width + 1, tile_latent_stride_width
+            ):
+                tile = z[
+                    :,
+                    :,
+                    :,
+                    i : i + tile_latent_min_height,
+                    j : j + tile_latent_min_width,
+                ]
                 tile = self.post_quant_conv(tile)
                 decoded = self.decoder(tile).clone()
                 row.append(decoded)
@@ -971,14 +1070,20 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         for i, row in enumerate(rows):
             result_row = []
             for j, tile in enumerate(row):
-                # blend the above tile and the left tile
-                # to the current tile and add the current tile to the result row
                 if i > 0:
                     tile = self.blend_v(rows[i - 1][j], tile, blend_height)
                 if j > 0:
                     tile = self.blend_h(row[j - 1], tile, blend_width)
-                height_lim = self.tile_sample_min_height if i == len(rows) - 1 else self.tile_sample_stride_height
-                width_lim = self.tile_sample_min_width if j == len(row) - 1 else self.tile_sample_stride_width
+                height_lim = (
+                    self.tile_sample_min_height
+                    if i == len(rows) - 1
+                    else self.tile_sample_stride_height
+                )
+                width_lim = (
+                    self.tile_sample_min_width
+                    if j == len(row) - 1
+                    else self.tile_sample_stride_width
+                )
                 result_row.append(tile[:, :, :, :height_lim, :width_lim])
             result_rows.append(torch.cat(result_row, dim=-1))
 
@@ -989,18 +1094,29 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         return DecoderOutput(sample=dec)
 
     def _temporal_tiled_encode(self, x: torch.Tensor) -> AutoencoderKLOutput:
-        batch_size, num_channels, num_frames, height, width = x.shape
+        _, _, num_frames, height, width = x.shape
         latent_num_frames = (num_frames - 1) // self.temporal_compression_ratio + 1
 
-        tile_latent_min_num_frames = self.tile_sample_min_num_frames // self.temporal_compression_ratio
-        tile_latent_stride_num_frames = self.tile_sample_stride_num_frames // self.temporal_compression_ratio
+        tile_latent_min_num_frames = (
+            self.tile_sample_min_num_frames // self.temporal_compression_ratio
+        )
+        tile_latent_stride_num_frames = (
+            self.tile_sample_stride_num_frames // self.temporal_compression_ratio
+        )
         blend_num_frames = tile_latent_min_num_frames - tile_latent_stride_num_frames
 
         row = []
-        #for i in range(0, num_frames, self.tile_sample_stride_num_frames):
-        for i in range(0, num_frames - self.tile_sample_min_num_frames + 1, self.tile_sample_stride_num_frames):
+        # for i in range(0, num_frames, self.tile_sample_stride_num_frames):
+        for i in range(
+            0,
+            num_frames - self.tile_sample_min_num_frames + 1,
+            self.tile_sample_stride_num_frames,
+        ):
             tile = x[:, :, i : i + self.tile_sample_min_num_frames + 1, :, :]
-            if self.use_tiling and (height > self.tile_sample_min_height or width > self.tile_sample_min_width):
+            if self.use_tiling and (
+                height > self.tile_sample_min_height
+                or width > self.tile_sample_min_width
+            ):
                 tile = self.tiled_encode(tile)
             else:
                 tile = self.encoder(tile).clone()
@@ -1013,29 +1129,51 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         for i, tile in enumerate(row):
             if i > 0:
                 tile = self.blend_t(row[i - 1], tile, blend_num_frames)
-                t_lim = tile_latent_min_num_frames if i == len(row) - 1 else tile_latent_stride_num_frames
+                t_lim = (
+                    tile_latent_min_num_frames
+                    if i == len(row) - 1
+                    else tile_latent_stride_num_frames
+                )
                 result_row.append(tile[:, :, :t_lim, :, :])
             else:
-                result_row.append(tile[:, :, :tile_latent_stride_num_frames + 1, :, :])
+                result_row.append(tile[:, :, : tile_latent_stride_num_frames + 1, :, :])
 
         enc = torch.cat(result_row, dim=2)[:, :, :latent_num_frames]
         return enc
 
-    def _temporal_tiled_decode(self, z: torch.Tensor, return_dict: bool = True) -> Union[DecoderOutput, torch.Tensor]:
-        batch_size, num_channels, num_frames, height, width = z.shape
+    def _temporal_tiled_decode(
+        self, z: torch.Tensor, return_dict: bool = True
+    ) -> Union[DecoderOutput, torch.Tensor]:
+        _, _, num_frames, _, _ = z.shape
         num_sample_frames = (num_frames - 1) * self.temporal_compression_ratio + 1
 
-        tile_latent_min_height = self.tile_sample_min_height // self.spatial_compression_ratio
-        tile_latent_min_width = self.tile_sample_min_width // self.spatial_compression_ratio
-        tile_latent_min_num_frames = self.tile_sample_min_num_frames // self.temporal_compression_ratio
-        tile_latent_stride_num_frames = self.tile_sample_stride_num_frames // self.temporal_compression_ratio
-        blend_num_frames = self.tile_sample_min_num_frames - self.tile_sample_stride_num_frames
+        tile_latent_min_height = (
+            self.tile_sample_min_height // self.spatial_compression_ratio
+        )
+        tile_latent_min_width = (
+            self.tile_sample_min_width // self.spatial_compression_ratio
+        )
+        tile_latent_min_num_frames = (
+            self.tile_sample_min_num_frames // self.temporal_compression_ratio
+        )
+        tile_latent_stride_num_frames = (
+            self.tile_sample_stride_num_frames // self.temporal_compression_ratio
+        )
+        blend_num_frames = (
+            self.tile_sample_min_num_frames - self.tile_sample_stride_num_frames
+        )
 
         row = []
-        #for i in range(0, num_frames, tile_latent_stride_num_frames):
-        for i in range(0, num_frames - tile_latent_min_num_frames + 1, tile_latent_stride_num_frames):
+        for i in range(
+            0,
+            num_frames - tile_latent_min_num_frames + 1,
+            tile_latent_stride_num_frames,
+        ):
             tile = z[:, :, i : i + tile_latent_min_num_frames + 1, :, :]
-            if self.use_tiling and (tile.shape[-1] > tile_latent_min_width or tile.shape[-2] > tile_latent_min_height):
+            if self.use_tiling and (
+                tile.shape[-1] > tile_latent_min_width
+                or tile.shape[-2] > tile_latent_min_height
+            ):
                 decoded = self.tiled_decode(tile, return_dict=True).sample
             else:
                 tile = self.post_quant_conv(tile)
@@ -1048,10 +1186,16 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         for i, tile in enumerate(row):
             if i > 0:
                 tile = self.blend_t(row[i - 1], tile, blend_num_frames)
-                t_lim = self.tile_sample_min_num_frames if i == len(row) - 1 else self.tile_sample_stride_num_frames
+                t_lim = (
+                    self.tile_sample_min_num_frames
+                    if i == len(row) - 1
+                    else self.tile_sample_stride_num_frames
+                )
                 result_row.append(tile[:, :, :t_lim, :, :])
             else:
-                result_row.append(tile[:, :, :self.tile_sample_stride_num_frames + 1, :, :])
+                result_row.append(
+                    tile[:, :, : self.tile_sample_stride_num_frames + 1, :, :]
+                )
 
         dec = torch.cat(result_row, dim=2)[:, :, :num_sample_frames]
 
@@ -1083,9 +1227,11 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         dec = self.decode(z, return_dict=return_dict)
         return dec
 
-    def apply_tiling(self, tile: Tuple[int, int, int, int], stride: Tuple[int, int, int]):
+    def apply_tiling(
+        self, tile: Tuple[int, int, int, int], stride: Tuple[int, int, int]
+    ):
         """Applies tiling."""
-        b, ft, ht, wt = tile
+        _, ft, ht, wt = tile
         fs, hs, ws = stride
 
         self.use_tiling = True
@@ -1096,8 +1242,9 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         self.tile_sample_stride_height = hs
         self.tile_sample_stride_width = ws
 
-    def get_enc_optimal_tiling(self,
-            shape: List[int]) -> Tuple[Tuple[int, int, int, int], Tuple[int, int, int]]:
+    def get_enc_optimal_tiling(
+        self, shape: List[int]
+    ) -> Tuple[Tuple[int, int, int, int], Tuple[int, int, int]]:
         """Returns optimal tiling for given shape."""
         _, _, num_frames, height, width = shape
 
@@ -1114,11 +1261,12 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
             ws = OPT_SPATIAL_TILING[width][1]
         else:
             ht, hs, wt, ws = height, height, width, width
-        
+
         return (1, ft, ht, wt), (fs, hs, ws)
-    
-    def get_dec_optimal_tiling(self,
-            shape: List[int]) -> Tuple[Tuple[int, int, int, int], Tuple[int, int, int]]:
+
+    def get_dec_optimal_tiling(
+        self, shape: List[int]
+    ) -> Tuple[Tuple[int, int, int, int], Tuple[int, int, int]]:
         """Returns optimal tiling for given shape."""
         b, _, f, h, w = shape
         enc_inp_shape = [b, 3, 4 * (f - 1) + 1, 8 * h, 8 * w]
@@ -1126,31 +1274,9 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
 
 
 def build_vae(conf):
-    if conf.name == 'hunyuan':
-        return AutoencoderKLHunyuanVideo.from_pretrained(conf.checkpoint_path, subfolder="vae", torch_dtype=torch.float16)
-    elif conf.name == 'flux':
-        # /home/jovyan/nvaulin/kandinsky-5/data_encoding/pretrained/black-forest-labs/FLUX.1-dev
-        vae = AutoencoderKL.from_pretrained(conf.checkpoint_path, subfolder="vae", torch_dtype=torch.float16)
-        vae.config['model_type'] = 'image'
-        return vae
-    elif conf.name == 'kvae':
-        from .mokl import get_mokl
-        # /home/jovyan/nvaulin/models/kvae/mokl-f8-16ch
-        vae = get_mokl(conf.checkpoint_path+'.yaml', conf.checkpoint_path+'.ckpt', use_ema=True).half()
-        vae.config['model_type'] = 'image'
-        return vae
-    elif conf.name == 'video-kvae':
-        from .video_kvae.cached_model import CachedCausalVAE
-        # /home/jovyan/nvaulin/models/video-kvae/vae_257_ch16_488
-        vae_config = OmegaConf.load(conf.checkpoint_path+'.yaml')
-        vae = CachedCausalVAE(**vae_config)
-        vae.init_from_ckpt(conf.checkpoint_path+'.ckpt')
-        vae = vae.eval().bfloat16()
-        vae.config = vae_config
-        return vae
-    if conf.name == 'movq':
-        from .movq import get_movq
-        # '/home/jovyan/nvaulin/models/movq/movq_270M.pt'
-        return get_movq(conf.checkpoint_path,device='cpu')
+    if conf.name == "hunyuan":
+        return AutoencoderKLHunyuanVideo.from_pretrained(
+            conf.checkpoint_path, subfolder="vae", torch_dtype=torch.float16
+        )
     else:
-        assert False, 'unknown vae name %s'%conf.name
+        assert False, f"unknown vae name {conf.name}"

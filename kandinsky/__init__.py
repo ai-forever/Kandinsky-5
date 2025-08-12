@@ -1,4 +1,3 @@
-
 import os
 from typing import Optional, Union
 import torch
@@ -16,38 +15,37 @@ from .t2v_pipeline import Kandinsky5T2VPipeline
 
 
 def get_T2V_pipeline(
-        device_map: Union[str, torch.device, dict],
-        resolution: int = 512,
-        cache_dir: str = './weights/',
-        dit_path: str = None,
-        text_encoder_path: str = None,
-        text_encoder2_path: str = None,
-        vae_path: str = None,
-        conf_path: str = None,
+    device_map: Union[str, torch.device, dict],
+    resolution: int = 512,
+    cache_dir: str = "./weights/",
+    dit_path: str = None,
+    text_encoder_path: str = None,
+    text_encoder2_path: str = None,
+    vae_path: str = None,
+    conf_path: str = None,
 ) -> Kandinsky5T2VPipeline:
-    
     assert resolution in [512]
-    
+
     if not isinstance(device_map, dict):
-        device_map = {
-            'dit': device_map, 
-            'vae': device_map, 
-            'text_embedder': device_map
-        }
+        device_map = {"dit": device_map, "vae": device_map, "text_embedder": device_map}
 
     try:
-        local_rank, world_size = int(os.environ["LOCAL_RANK"]), int(os.environ["WORLD_SIZE"])
+        local_rank, world_size = int(os.environ["LOCAL_RANK"]), int(
+            os.environ["WORLD_SIZE"]
+        )
     except:
         local_rank, world_size = 0, 1
-        
+
     if world_size > 1:
-        device_mesh = init_device_mesh("cuda", (world_size,), mesh_dim_names=("tensor_parallel",))
-        device_map["dit"] = torch.device(f'cuda:{local_rank}')
-        device_map["vae"] = torch.device(f'cuda:{local_rank}')
-        device_map["text_embedder"] = torch.device(f'cuda:{local_rank}')
+        device_mesh = init_device_mesh(
+            "cuda", (world_size,), mesh_dim_names=("tensor_parallel",)
+        )
+        device_map["dit"] = torch.device(f"cuda:{local_rank}")
+        device_map["vae"] = torch.device(f"cuda:{local_rank}")
+        device_map["text_embedder"] = torch.device(f"cuda:{local_rank}")
 
     os.makedirs(cache_dir, exist_ok=True)
-    
+
     if dit_path is None:
         # dit_path = hf_hub_download(
         #     repo_id="ai-forever/kandinsky-4-t2v-flash", filename=f"kandinsky4_distil_{resolution}.pt", local_dir=cache_dir
@@ -56,29 +54,36 @@ def get_T2V_pipeline(
 
     if vae_path is None:
         vae_path = snapshot_download(
-            repo_id="hunyuanvideo-community/HunyuanVideo", allow_patterns='vae/*', local_dir=cache_dir
-        ) 
+            repo_id="hunyuanvideo-community/HunyuanVideo",
+            allow_patterns="vae/*",
+            local_dir=cache_dir,
+        )
         vae_path = os.path.join(cache_dir, "vae/")
 
     if text_encoder_path is None:
         text_encoder_path = snapshot_download(
-            repo_id="Qwen/Qwen2.5-VL-7B-Instruct", local_dir=os.path.join(cache_dir, "text_encoder/")
-        ) 
+            repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
+            local_dir=os.path.join(cache_dir, "text_encoder/"),
+        )
         text_encoder_path = os.path.join(cache_dir, "text_encoder/")
 
     if text_encoder2_path is None:
         text_encoder2_path = snapshot_download(
-            repo_id="openai/clip-vit-large-patch14", local_dir=os.path.join(cache_dir, "text_encoder2/")
-        ) 
+            repo_id="openai/clip-vit-large-patch14",
+            local_dir=os.path.join(cache_dir, "text_encoder2/"),
+        )
         text_encoder2_path = os.path.join(cache_dir, "text_encoder2/")
-        
+
     if conf_path is None:
-        conf = get_default_conf(dit_path, vae_path, text_encoder_path, text_encoder2_path)
+        conf = get_default_conf(
+            dit_path, vae_path, text_encoder_path, text_encoder2_path
+        )
     else:
         conf = OmegaConf.load(conf_path)
 
-   
-    text_embedder = get_text_embedder(conf.model.text_embedder).to(device=device_map["text_embedder"])
+    text_embedder = get_text_embedder(conf.model.text_embedder).to(
+        device=device_map["text_embedder"]
+    )
     vae = build_vae(conf.model.vae)
     vae = vae.eval().to(device=device_map["vae"])
 
@@ -89,7 +94,6 @@ def get_T2V_pipeline(
 
     if world_size > 1:
         dit = parallelize_dit(dit, device_mesh["tensor_parallel"])
-        
 
     return Kandinsky5T2VPipeline(
         device_map=device_map,
@@ -99,17 +103,16 @@ def get_T2V_pipeline(
         resolution=resolution,
         local_dit_rank=local_rank,
         world_size=world_size,
-        conf=conf
+        conf=conf,
     )
 
 
 def get_default_conf(
-    dit_path, 
+    dit_path,
     vae_path,
     text_encoder_path,
-    text_encoder2_path, 
+    text_encoder2_path,
 ) -> DictConfig:
-
     dit_params = {
         "in_visual_dim": 16,
         "out_visual_dim": 16,
@@ -122,15 +125,15 @@ def get_default_conf(
         "axes_dims": [16, 24, 24],
         "visual_cond": True,
         "in_text_dim": 3584,
-        "in_text_dim2": 768
+        "in_text_dim2": 768,
     }
-    
+
     attention = {
         "type": "flash",
         "causal": False,
         "local": False,
         "glob": False,
-        "window": 3
+        "window": 3,
     }
 
     vae = {
@@ -142,25 +145,25 @@ def get_default_conf(
         "qwen": {
             "emb_size": 3584,
             "checkpoint_path": text_encoder_path,
-            "max_length": 256
+            "max_length": 256,
         },
         "clip": {
             "checkpoint_path": text_encoder2_path,
             "emb_size": 768,
-            "max_length": 77
-        }
+            "max_length": 77,
+        },
     }
-    
+
     conf = {
         "model": {
             "checkpoint_path": dit_path,
             "vae": vae,
             "text_embedder": text_embedder,
             "dit_params": dit_params,
-            "attention": attention
+            "attention": attention,
         },
-        "metrics": {"scale_factor": (1,2,2)},
-        "resolution": 512, 
+        "metrics": {"scale_factor": (1, 2, 2)},
+        "resolution": 512,
     }
 
     return DictConfig(conf)

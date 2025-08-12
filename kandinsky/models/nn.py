@@ -7,14 +7,16 @@ from flash_attn import flash_attn_varlen_qkvpacked_func, flash_attn_varlen_func
 from .utils import get_freqs
 from torch.nn.attention.flex_attention import flex_attention
 from .utils import nablaT_v2_doc, nablaT_v2_doc_mfcausal
+
 try:
     import flash_attn_interface
+
     FA3 = True
 except:
     FA3 = False
 
 flex = torch.compile(flex_attention, mode="max-autotune-no-cudagraphs", dynamic=True)
-#flex = torch.compile(flex_attention, dynamic=True, fullgraph=True)
+# flex = torch.compile(flex_attention, dynamic=True, fullgraph=True)
 
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
@@ -35,13 +37,14 @@ def apply_rotary(x, rope):
 
 
 class TimeEmbeddings(nn.Module):
-
-    def __init__(self, model_dim, time_dim, max_period=10000.):
+    def __init__(self, model_dim, time_dim, max_period=10000.0):
         super().__init__()
         assert model_dim % 2 == 0
         self.model_dim = model_dim
         self.max_period = max_period
-        self.register_buffer('freqs', get_freqs(model_dim // 2, max_period), persistent=False)
+        self.register_buffer(
+            "freqs", get_freqs(model_dim // 2, max_period), persistent=False
+        )
         self.in_layer = nn.Linear(model_dim, time_dim, bias=True)
         self.activation = nn.SiLU()
         self.out_layer = nn.Linear(time_dim, time_dim, bias=True)
@@ -53,12 +56,11 @@ class TimeEmbeddings(nn.Module):
         time_embed = self.out_layer(self.activation(self.in_layer(time_embed)))
         time_embed_idx = torch.arange(
             time_embed.shape[0], device=time_embed.device, dtype=torch.int32
-            )
+        )
         return time_embed, time_embed_idx
 
 
 class TextEmbeddings(nn.Module):
-
     def __init__(self, text_dim, model_dim):
         super().__init__()
         self.in_layer = nn.Linear(text_dim, model_dim, bias=True)
@@ -70,7 +72,6 @@ class TextEmbeddings(nn.Module):
 
 
 class VisualEmbeddings(nn.Module):
-
     def __init__(self, visual_dim, model_dim, patch_size):
         super().__init__()
         self.patch_size = patch_size
@@ -78,47 +79,58 @@ class VisualEmbeddings(nn.Module):
 
     def forward(self, x, visual_cu_seqlens):
         if self.patch_size[0] > 1:
-            idxs = torch.ones(x.shape[0], dtype=torch.int32, device=visual_cu_seqlens.device)
+            idxs = torch.ones(
+                x.shape[0], dtype=torch.int32, device=visual_cu_seqlens.device
+            )
             idxs[visual_cu_seqlens[:-1]] += self.patch_size[0] - 1
             x = torch.repeat_interleave(x, idxs, dim=0)
             visual_cu_seqlens = visual_cu_seqlens + torch.arange(
-                visual_cu_seqlens.shape[0], device=visual_cu_seqlens.device, dtype=torch.int32
-                )
+                visual_cu_seqlens.shape[0],
+                device=visual_cu_seqlens.device,
+                dtype=torch.int32,
+            )
 
         duration, height, width, dim = x.shape
-        x = x.view(
-            duration // self.patch_size[0], self.patch_size[0],
-            height // self.patch_size[1], self.patch_size[1],
-            width // self.patch_size[2], self.patch_size[2], dim
-        ).permute(0, 2, 4, 1, 3, 5, 6).flatten(3, 6)
+        x = (
+            x.view(
+                duration // self.patch_size[0],
+                self.patch_size[0],
+                height // self.patch_size[1],
+                self.patch_size[1],
+                width // self.patch_size[2],
+                self.patch_size[2],
+                dim,
+            )
+            .permute(0, 2, 4, 1, 3, 5, 6)
+            .flatten(3, 6)
+        )
         visual_cu_seqlens = visual_cu_seqlens // self.patch_size[0]
         return self.in_layer(x), visual_cu_seqlens
 
 
 class RoPE1D(nn.Module):
-
-    def __init__(self, dim, max_pos=1024, max_period=10000.):
+    def __init__(self, dim, max_pos=1024, max_period=10000.0):
         super().__init__()
         self.max_period = max_period
         self.dim = dim
         self.max_pos = max_pos
         freq = get_freqs(dim // 2, max_period)
         pos = torch.arange(max_pos, dtype=freq.dtype)
-        self.register_buffer(f'args', torch.outer(pos, freq), persistent=False)
+        self.register_buffer(f"args", torch.outer(pos, freq), persistent=False)
 
     @torch.autocast(device_type="cuda", enabled=False)
     def forward(self, pos):
         args = self.args[pos]
         rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1
-            )
+            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
+            dim=-1,
+        )
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
 
 class RoPE3D(nn.Module):
-
-    def __init__(self, axes_dims, max_pos=(128, 128, 128), max_period=10000.):
+    def __init__(self, axes_dims, max_pos=(128, 128, 128), max_period=10000.0):
         super().__init__()
         self.axes_dims = axes_dims
         self.max_pos = max_pos
@@ -127,29 +139,32 @@ class RoPE3D(nn.Module):
         for i, (axes_dim, ax_max_pos) in enumerate(zip(axes_dims, max_pos)):
             freq = get_freqs(axes_dim // 2, max_period)
             pos = torch.arange(ax_max_pos, dtype=freq.dtype)
-            self.register_buffer(f'args_{i}', torch.outer(pos, freq), persistent=False)
+            self.register_buffer(f"args_{i}", torch.outer(pos, freq), persistent=False)
 
     @torch.autocast(device_type="cuda", enabled=False)
-    def forward(self, shape, pos, scale_factor=(1., 1., 1.)):
+    def forward(self, shape, pos, scale_factor=(1.0, 1.0, 1.0)):
         duration, height, width = shape
         args_t = self.args_0[pos[0]] / scale_factor[0]
         args_h = self.args_1[pos[1]] / scale_factor[1]
         args_w = self.args_2[pos[2]] / scale_factor[2]
 
-        args = torch.cat([
-            args_t.view(duration, 1, 1, -1).repeat(1, height, width, 1),
-            args_h.view(1, height, 1, -1).repeat(duration, 1, width, 1),
-            args_w.view(1, 1, width, -1).repeat(duration, height, 1, 1)
-        ], dim=-1)
+        args = torch.cat(
+            [
+                args_t.view(duration, 1, 1, -1).repeat(1, height, width, 1),
+                args_h.view(1, height, 1, -1).repeat(duration, 1, width, 1),
+                args_w.view(1, 1, width, -1).repeat(duration, height, 1, 1),
+            ],
+            dim=-1,
+        )
         rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)], dim=-1
-            )
+            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
+            dim=-1,
+        )
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
 
 class Modulation(nn.Module):
-
     def __init__(self, time_dim, model_dim, num_params):
         super().__init__()
         self.activation = nn.SiLU()
@@ -163,7 +178,6 @@ class Modulation(nn.Module):
 
 
 class MultiheadSelfAttention(nn.Module):
-
     def __init__(self, num_channels, head_dim):
         super().__init__()
         assert num_channels % head_dim == 0
@@ -182,7 +196,7 @@ class MultiheadSelfAttention(nn.Module):
         key = self.to_key(x)
         value = self.to_value(x)
 
-        shape = query.shape[:-1] 
+        shape = query.shape[:-1]
         query = query.reshape(*shape, self.num_heads, -1)
         key = key.reshape(*shape, self.num_heads, -1)
         value = value.reshape(*shape, self.num_heads, -1)
@@ -194,24 +208,25 @@ class MultiheadSelfAttention(nn.Module):
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    def scaled_dot_product_attention(self, query,key,value, cu_seqlens, return_attn_probs=False):
-
+    def scaled_dot_product_attention(
+        self, query, key, value, cu_seqlens, return_attn_probs=False
+    ):
         max_seqlen = torch.diff(cu_seqlens).max()
         if FA3:
             out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
-            q=query,
-            k=key,
-            v=value,
-            cu_seqlens_q=cu_seqlens,
-            cu_seqlens_k=cu_seqlens,
-            max_seqlen_q=max_seqlen,
-            max_seqlen_k=max_seqlen,
-           )
+                q=query,
+                k=key,
+                v=value,
+                cu_seqlens_q=cu_seqlens,
+                cu_seqlens_k=cu_seqlens,
+                max_seqlen_q=max_seqlen,
+                max_seqlen_k=max_seqlen,
+            )
         else:
             query_key_value = torch.stack([query, key, value], dim=-3)
             out, softmax_lse, _ = flash_attn_varlen_qkvpacked_func(
                 query_key_value, cu_seqlens, max_seqlen, return_attn_probs=True
-        )
+            )
 
         out = out.flatten(-2, -1)
 
@@ -220,37 +235,62 @@ class MultiheadSelfAttention(nn.Module):
         return out
 
     def attention_flex(
-            self, query, key, value, block_mask, 
-            sparse_params=None, return_sparsity=False
-            ):
-
-        query = query.unsqueeze(0).transpose(1,2).contiguous()
-        key = key.unsqueeze(0).transpose(1,2).contiguous()
-        value = value.unsqueeze(0).transpose(1,2).contiguous()
+        self, query, key, value, block_mask, sparse_params=None, return_sparsity=False
+    ):
+        query = query.unsqueeze(0).transpose(1, 2).contiguous()
+        key = key.unsqueeze(0).transpose(1, 2).contiguous()
+        value = value.unsqueeze(0).transpose(1, 2).contiguous()
         if block_mask is None:
             T, H, W = sparse_params["visual_shape"]
             H, W = H // 8, W // 8
-            if 'mf' not in sparse_params:
+            if "mf" not in sparse_params:
                 block_mask = nablaT_v2_doc(
-                    query, key, sparse_params['visual_seqlens'], T, H, W,
-                    wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'],
-                    thr=sparse_params['P'], add_sta=sparse_params['add_sta'],
-                    method=sparse_params['method']
+                    query,
+                    key,
+                    sparse_params["visual_seqlens"],
+                    T,
+                    H,
+                    W,
+                    wT=sparse_params["wT"],
+                    wH=sparse_params["wH"],
+                    wW=sparse_params["wW"],
+                    thr=sparse_params["P"],
+                    add_sta=sparse_params["add_sta"],
+                    method=sparse_params["method"],
                 )
             else:
                 block_mask = nablaT_v2_doc_mfcausal(
-                     query, key, sparse_params['visual_seqlens'], T, H, W, 
-                     wT=sparse_params['wT'], wH=sparse_params['wH'], wW=sparse_params['wW'],
-                     thr=sparse_params['P'], add_sta=sparse_params['add_sta'],
-                     mf=sparse_params['mf']
+                    query,
+                    key,
+                    sparse_params["visual_seqlens"],
+                    T,
+                    H,
+                    W,
+                    wT=sparse_params["wT"],
+                    wH=sparse_params["wH"],
+                    wW=sparse_params["wW"],
+                    thr=sparse_params["P"],
+                    add_sta=sparse_params["add_sta"],
+                    mf=sparse_params["mf"],
                 )
-        out = flex(
-            query, key, value,
-            block_mask=block_mask,
-        ).transpose(1, 2).squeeze(0).contiguous()
+        out = (
+            flex(
+                query,
+                key,
+                value,
+                block_mask=block_mask,
+            )
+            .transpose(1, 2)
+            .squeeze(0)
+            .contiguous()
+        )
         out = out.flatten(-2, -1)
         if return_sparsity:
-            return out, 100. * (1 - (1 - block_mask.sparsity() / 100) * (sparse_params['visual_seqlens'].shape[0] - 1))
+            return out, 100.0 * (
+                1
+                - (1 - block_mask.sparsity() / 100)
+                * (sparse_params["visual_seqlens"].shape[0] - 1)
+            )
         return out
 
     def attention_torch(self, query, key, value, torch_mask):
@@ -260,23 +300,38 @@ class MultiheadSelfAttention(nn.Module):
         key = key.unsqueeze(0).contiguous()
         value = value.unsqueeze(0).contiguous()
 
-        query, key, value = query.transpose(1, 2), key.transpose(1, 2), value.transpose(1, 2)
-        out = torch.nn.functional.scaled_dot_product_attention(
-            query, key, value,
-            attn_mask=torch_mask,
-        ).transpose(1, 2).squeeze(0).contiguous()
+        query, key, value = (
+            query.transpose(1, 2),
+            key.transpose(1, 2),
+            value.transpose(1, 2),
+        )
+        out = (
+            torch.nn.functional.scaled_dot_product_attention(
+                query,
+                key,
+                value,
+                attn_mask=torch_mask,
+            )
+            .transpose(1, 2)
+            .squeeze(0)
+            .contiguous()
+        )
 
         out = out.flatten(-2, -1)
         return out
 
-    def forward(self, x, rope, cu_seqlens, block_mask=None, torch_mask=None, sparse_params=None):
+    def forward(
+        self, x, rope, cu_seqlens, block_mask=None, torch_mask=None, sparse_params=None
+    ):
         query, key, value = self.get_qkv(x)
         query, key = self.norm_qk(query, key)
         query = apply_rotary(query, rope).type_as(query)
         key = apply_rotary(key, rope).type_as(key)
 
         if block_mask is not None or sparse_params is not None:
-            out = self.attention_flex(query, key, value, block_mask, sparse_params=sparse_params)
+            out = self.attention_flex(
+                query, key, value, block_mask, sparse_params=sparse_params
+            )
         elif torch_mask is not None:
             out = self.attention_torch(query, key, value, torch_mask)
         else:
@@ -287,7 +342,6 @@ class MultiheadSelfAttention(nn.Module):
 
 
 class MultiheadCrossAttention(nn.Module):
-
     def __init__(self, num_channels, head_dim):
         super().__init__()
         assert num_channels % head_dim == 0
@@ -319,14 +373,19 @@ class MultiheadCrossAttention(nn.Module):
         return q, k
 
     def scaled_dot_product_attention(
-            self, query, key, value, 
-            cu_seqlens, cond_cu_seqlens, return_attn_probs=False
-            ):
+        self, query, key, value, cu_seqlens, cond_cu_seqlens, return_attn_probs=False
+    ):
         max_seqlen = torch.diff(cu_seqlens).max()
         cond_max_seqlen = torch.diff(cond_cu_seqlens).max()
         out, softmax_lse, _ = flash_attn_varlen_func(
-            query, key, value, cu_seqlens, cond_cu_seqlens, max_seqlen, cond_max_seqlen,
-            return_attn_probs=True
+            query,
+            key,
+            value,
+            cu_seqlens,
+            cond_cu_seqlens,
+            max_seqlen,
+            cond_max_seqlen,
+            return_attn_probs=True,
         )
         out = out.flatten(-2, -1)
 
@@ -338,13 +397,14 @@ class MultiheadCrossAttention(nn.Module):
         query, key, value = self.get_qkv(x, cond)
         query, key = self.norm_qk(query, key)
 
-        out = self.scaled_dot_product_attention(query, key, value, cu_seqlens, cond_cu_seqlens)
+        out = self.scaled_dot_product_attention(
+            query, key, value, cu_seqlens, cond_cu_seqlens
+        )
         out = self.out_layer(out)
         return out
 
 
 class FeedForward(nn.Module):
-
     def __init__(self, dim, ff_dim):
         super().__init__()
         self.in_layer = nn.Linear(dim, ff_dim, bias=False)
@@ -356,32 +416,52 @@ class FeedForward(nn.Module):
 
 
 class OutLayer(nn.Module):
-
     def __init__(self, model_dim, time_dim, visual_dim, patch_size):
         super().__init__()
         self.patch_size = patch_size
         self.modulation = Modulation(time_dim, model_dim, 2)
         self.norm = nn.LayerNorm(model_dim, elementwise_affine=False)
-        self.out_layer = nn.Linear(model_dim, math.prod(patch_size) * visual_dim, bias=True)
+        self.out_layer = nn.Linear(
+            model_dim, math.prod(patch_size) * visual_dim, bias=True
+        )
 
-    def forward(self, visual_embed, text_embed, time_embed, visual_cu_seqlens, time_embed_idx):
+    def forward(
+        self, visual_embed, text_embed, time_embed, visual_cu_seqlens, time_embed_idx
+    ):
         shift, scale = torch.chunk(self.modulation(time_embed), 2, dim=-1)
         visual_embed = apply_scale_shift_norm(
-            self.norm, visual_embed, scale[:, None, None], shift[:, None, None], time_embed_idx
+            self.norm,
+            visual_embed,
+            scale[:, None, None],
+            shift[:, None, None],
+            time_embed_idx,
         ).type_as(visual_embed)
         x = self.out_layer(visual_embed)
 
         duration, height, width, dim = x.shape
-        x = x.view(
-            duration, height, width,
-            -1, self.patch_size[0], self.patch_size[1], self.patch_size[2]
-        ).permute(0, 4, 1, 5, 2, 6, 3).flatten(0, 1).flatten(1, 2).flatten(2, 3)
+        x = (
+            x.view(
+                duration,
+                height,
+                width,
+                -1,
+                self.patch_size[0],
+                self.patch_size[1],
+                self.patch_size[2],
+            )
+            .permute(0, 4, 1, 5, 2, 6, 3)
+            .flatten(0, 1)
+            .flatten(1, 2)
+            .flatten(2, 3)
+        )
         visual_cu_seqlens = visual_cu_seqlens * self.patch_size[0]
 
         if self.patch_size[0] > 1:
             idxs = torch.ones(
-                duration * self.patch_size[0], dtype=torch.int32, device=visual_cu_seqlens.device
-                )
+                duration * self.patch_size[0],
+                dtype=torch.int32,
+                device=visual_cu_seqlens.device,
+            )
             idxs[visual_cu_seqlens[:-1]] -= self.patch_size[0] - 1
             x = torch.repeat_interleave(x, idxs, dim=0)
         return x
