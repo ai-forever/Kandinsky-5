@@ -7,26 +7,32 @@
 </div>
 
 <div align="center">
-  <a href="">Article</a> | <a href=>Project Page</a> | <a href=>Generate🤗</a> | Technical Report (soon) | <a href=> T2V Flash🤗</a>
+  <a href="">Article</a> | <a href=>Project Page</a> |Technical Report (soon) | <a href=> Models🤗 (soon) </a>
 </div>
 
 <h1>Kandinsky 5.0: A family of diffusion models for Video generation</h1>
 
-In this repository, we provide a family of diffusion models to generate a video given a textual prompt or an image (<em>Coming Soon</em>), a distilled model for a faster generation and a video to audio generation model.
+In this repository, we provide a family of diffusion models to generate a video given a textual prompt or an image (<em>Coming Soon</em>) and distilled model for a faster generation.
 
 ## Project Updates
 
-- 🔥 **Source**: ```2025/XX/XX```: We have open-sourced `Kandinsky 5.0 T2V` a pretrain-5s-lite, pretrain-10s-lite, sft-5s-lite, sft-10s-lite, distil-5s-lite versions of `Kandinsky 5.0 T2V` text-to-video generation model.
+- 🔥 **Source**: ```2025/08/XX```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 T2V` text-to-video generation model. Released checkpoints: flash_5s_pretrain, nabla_10s_pretrain, flash_5s_sft, nabla_10s_sft, flash_5s_distil (flash_... checkpoints are the the base model checkpoints, nabla_... is the faster model checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm)
 
 ## Table of contents
 <ul>
-  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V LITE</a>: Small text-to-video model </em></li>
-  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V PRO</a>: A text-to-video model - <em>Coming Soon</em></li>
-  <li><a href="#kandinsky-50-i2v-image-to-video">Kandinsky 5.0 I2V</a>: An image-to-video model - <em>Coming Soon</em> </li>
+  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V Lite</a>: Lite text-to-video model </em></li>
+  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V Pro</a>: Pro text-to-video model - <em>Coming Soon</em></li>
+  <li><a href="#kandinsky-50-i2v-image-to-video">Kandinsky 5.0 I2V Lite</a>: A lite image-to-video model - <em>Coming Soon</em> </li>
+  <li><a href="#kandinsky-50-i2v-image-to-video">Kandinsky 5.0 I2V Pro</a>: A pro image-to-video model - <em>Coming Soon</em> </li>
 </ul>
 
 
-## Kandinsky 5.0 T2V LITE
+## Kandinsky 5.0 T2V Lite
+
+
+
+### Reesults: 
+TODO: add SBS
 
 ### Examples:
 
