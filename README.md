@@ -33,24 +33,24 @@ In this repository, we provide a family of diffusion models to generate a video 
 <table border="0" style="width: 200; text-align: left; margin-top: 20px;">
   <tr>
       <td>
-          <video src="https://github.com/gen-ai-team/kandinsky-5-inference/blob/main/assets/generation_examples/1036335634.mp4" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/d5a0c11e-020b-4e56-9a17-5b3995890908" width=200 controls autoplay loop></video>
       </td>
       <td>
-          <video src="" width=200 controls autoplay loop></video>
-      </td>
-  <tr>
-      <td>
-          <video src="" width=200 controls autoplay loop></video>
-      </td>
-      <td>
-          <video src="" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/98ba32be-96c7-4d6c-8ffa-3cf77710581a" width=200 controls autoplay loop></video>
       </td>
   <tr>
       <td>
-          <video src="" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/140b64ae-9c34-4763-98a6-4c7408be3a4e" width=200 controls autoplay loop></video>
       </td>
       <td>
-          <video src="" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/d3eab231-d7e8-4f0a-9829-2b066ad8301d" width=200 controls autoplay loop></video>
+      </td>
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/f955f0e0-7141-4413-aa1e-11827c108f83" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/4eb10e1d-60a0-4ff9-ad7e-9b5ab0a0fff8" width=200 controls autoplay loop></video>
       </td>
   </tr>
 
