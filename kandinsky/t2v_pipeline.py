@@ -85,8 +85,8 @@ class Kandinsky5T2VPipeline:
     def __call__(
         self,
         text: Union[str, List[str]],
-        time_length: int = 12,  # time in seconds 0 if you want generate image
-        width: int = 512,
+        time_length: int = 5,  # time in seconds 0 if you want generate image
+        width: int = 768,
         height: int = 512,
         seed: int = None,
         num_steps: int = 50,
@@ -95,6 +95,7 @@ class Kandinsky5T2VPipeline:
         negative_caption: str = "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards",
         expand_prompts: bool = True,
         save_path: Union[str, List[str]] = None,
+        progress: bool = True,
     ):
         # SEED
         if seed is None:
@@ -147,6 +148,7 @@ class Kandinsky5T2VPipeline:
             seed=seed,
             device=self.device_map["dit"],
             vae_device=self.device_map["vae"],
+            progress=progress
         )
         torch.cuda.empty_cache()
 

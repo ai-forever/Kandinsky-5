@@ -13,6 +13,8 @@ from .models.vae import build_vae
 from .models.parallelize import parallelize_dit
 from .t2v_pipeline import Kandinsky5T2VPipeline
 
+from safetensors.torch import load_file
+
 
 def get_T2V_pipeline(
     device_map: Union[str, torch.device, dict],
@@ -47,10 +49,12 @@ def get_T2V_pipeline(
     os.makedirs(cache_dir, exist_ok=True)
 
     if dit_path is None:
-        # dit_path = hf_hub_download(
-        #     repo_id="ai-forever/kandinsky-4-t2v-flash", filename=f"kandinsky4_distil_{resolution}.pt", local_dir=cache_dir
+        # dit_path = snapshot_download(
+        #     repo_id="", # TODO add hf repo
+        #     allow_patterns="model/*",
+        #     local_dir=cache_dir,
         # )
-        pass
+        dit_path = os.path.join(cache_dir, "model/flash_5s_sft.safetensors")
 
     if vae_path is None:
         vae_path = snapshot_download(
@@ -89,7 +93,7 @@ def get_T2V_pipeline(
 
     dit = get_dit(conf.model.dit_params)
     dit = dit.to(device_map["dit"])
-    state_dict = torch.load(dit_path, map_location="cpu")
+    state_dict = load_file(dit_path)
     dit.load_state_dict(state_dict)
 
     if world_size > 1:

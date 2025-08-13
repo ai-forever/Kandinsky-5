@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from tqdm import tqdm 
 
 from .models.utils import create_doc_causal_mask, fast_doc_causal_sta
 
@@ -68,14 +69,6 @@ def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
     return sparse_params
 
 
-def get_frame_idx(num_frames, video_len):
-    intervals = np.linspace(start=0, stop=video_len, num=num_frames + 1).astype(int)
-    ranges = []
-    for idx, interv in enumerate(intervals[:-1]):
-        ranges.append((interv, intervals[idx + 1] - 1))
-    return [(x[0] + x[1]) // 2 for x in ranges]
-
-
 @torch.no_grad()
 def get_velocity(
     dit,
@@ -107,21 +100,22 @@ def get_velocity(
         scale_factor=conf.metrics.scale_factor,
         sparse_params=sparse_params,
     )
-    uncond_pred_velocity = dit(
-        x,
-        null_text_embeds["text_embeds"],
-        null_text_embeds["pooled_embed"],
-        t * 1000,
-        visual_cu_seqlens,
-        null_text_cu_seqlens,
-        visual_rope_pos,
-        null_text_rope_pos,
-        scale_factor=conf.metrics.scale_factor,
-        sparse_params=sparse_params,
-    )
-    pred_velocity = uncond_pred_velocity + guidance_weight * (
-        pred_velocity - uncond_pred_velocity
-    )
+    if abs(guidance_weight) > 1e-6:
+        uncond_pred_velocity = dit(
+            x,
+            null_text_embeds["text_embeds"],
+            null_text_embeds["pooled_embed"],
+            t * 1000,
+            visual_cu_seqlens,
+            null_text_cu_seqlens,
+            visual_rope_pos,
+            null_text_rope_pos,
+            scale_factor=conf.metrics.scale_factor,
+            sparse_params=sparse_params,
+        )
+        pred_velocity = uncond_pred_velocity + guidance_weight * (
+            pred_velocity - uncond_pred_velocity
+        )
     return pred_velocity
 
 
@@ -155,7 +149,7 @@ def generate(
     timesteps = torch.linspace(1, 0, num_steps, device=device)
     timesteps = scheduler_scale * timesteps / (1 + (scheduler_scale - 1) * timesteps)
 
-    for timestep, timestep_diff in list(zip(timesteps[:-1], torch.diff(timesteps))):
+    for timestep, timestep_diff in tqdm(list(zip(timesteps[:-1], torch.diff(timesteps)))):
         time = timestep.unsqueeze(0).repeat(visual_cu_seqlens.shape[0] - 1)
         if model.visual_cond:
             visual_cond = torch.zeros_like(img)
@@ -201,6 +195,7 @@ def generate_sample(
     seed=6554,
     device="cuda",
     vae_device="cuda",
+    progress=True,
 ):
     bs, duration, height, width, dim = shape
     if duration == 1:
@@ -256,6 +251,7 @@ def generate_sample(
                 scheduler_scale,
                 conf,
                 seed=seed,
+                progress=progress,
             )
 
     with torch.no_grad():
