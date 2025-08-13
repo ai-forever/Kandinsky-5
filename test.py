@@ -5,9 +5,7 @@ import time
 if __name__ == "__main__":
     
     pipe = get_T2V_pipeline(
-        device_map={"dit": "cuda:0", "vae": "cuda:1", "text_embedder": "cuda:2" },
-        resolution = 512,
-        dit_path="/home/jovyan/shares/SR008.fs2/maria/kandinsky/kandinsky5/saved_models/gathered_checkpoints/video_2B_T2V_I2V_512_768_1_step_45000.pt",
+        device_map={"dit": "cuda:0", "vae": "cuda:0", "text_embedder": "cuda:0" },
     )
 
     start_time = time.perf_counter()

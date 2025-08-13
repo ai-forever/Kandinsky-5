@@ -48,7 +48,7 @@ def get_T2V_pipeline(
 
     os.makedirs(cache_dir, exist_ok=True)
 
-    if dit_path is None:
+    if dit_path is None and conf_path is None:
         # dit_path = snapshot_download(
         #     repo_id="", # TODO add hf repo
         #     allow_patterns="model/*",
@@ -56,7 +56,7 @@ def get_T2V_pipeline(
         # )
         dit_path = os.path.join(cache_dir, "model/flash_5s_sft.safetensors")
 
-    if vae_path is None:
+    if vae_path is None and conf_path is None:
         vae_path = snapshot_download(
             repo_id="hunyuanvideo-community/HunyuanVideo",
             allow_patterns="vae/*",
@@ -64,14 +64,14 @@ def get_T2V_pipeline(
         )
         vae_path = os.path.join(cache_dir, "vae/")
 
-    if text_encoder_path is None:
+    if text_encoder_path is None and conf_path is None:
         text_encoder_path = snapshot_download(
             repo_id="Qwen/Qwen2.5-VL-7B-Instruct",
             local_dir=os.path.join(cache_dir, "text_encoder/"),
         )
         text_encoder_path = os.path.join(cache_dir, "text_encoder/")
 
-    if text_encoder2_path is None:
+    if text_encoder2_path is None and conf_path is None:
         text_encoder2_path = snapshot_download(
             repo_id="openai/clip-vit-large-patch14",
             local_dir=os.path.join(cache_dir, "text_encoder2/"),
@@ -93,7 +93,7 @@ def get_T2V_pipeline(
 
     dit = get_dit(conf.model.dit_params)
     dit = dit.to(device_map["dit"])
-    state_dict = load_file(dit_path)
+    state_dict = load_file(conf.model.checkpoint_path)
     dit.load_state_dict(state_dict)
 
     if world_size > 1:

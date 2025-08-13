@@ -100,7 +100,7 @@ def get_velocity(
         scale_factor=conf.metrics.scale_factor,
         sparse_params=sparse_params,
     )
-    if abs(guidance_weight) > 1e-6:
+    if abs(guidance_weight - 1.0) > 1e-6:
         uncond_pred_velocity = dit(
             x,
             null_text_embeds["text_embeds"],
@@ -146,7 +146,7 @@ def generate(
     sparse_params = get_sparse_params(
         conf, {"visual": img}, {"visual_rope": visual_cu_seqlens}, device
     )
-    timesteps = torch.linspace(1, 0, num_steps, device=device)
+    timesteps = torch.linspace(1, 0, num_steps + 1, device=device)
     timesteps = scheduler_scale * timesteps / (1 + (scheduler_scale - 1) * timesteps)
 
     for timestep, timestep_diff in tqdm(list(zip(timesteps[:-1], torch.diff(timesteps)))):
@@ -253,6 +253,7 @@ def generate_sample(
                 seed=seed,
                 progress=progress,
             )
+    torch.cuda.empty_cache()
 
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
