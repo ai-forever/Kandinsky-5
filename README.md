@@ -107,10 +107,11 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
 ## 📑 Todo List
 - Kandinsky 5.0 Lite Text-to-Video
     - [x] Multi-GPU Inference code of the 2B models
-    - [x] Checkpoints 2B models: pretrain
-    - [x] Checkpoints 2B models: sft
-    - [ ] Checkpoints 2B models: rl
-    - [x] Checkpoints 2B models: distil
+    - [ ] Checkpoints 2B models
+      - [x]  pretrain
+      - [x] sft
+      - [ ] rl
+      - [x] distil
     - [x] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Lite Image-to-Video
@@ -129,8 +130,33 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 
-# Authors
+ 
+## Quickstart
 
+#### Installation
+Clone the repo:
+```sh
+git clone TODO add actual repo
+cd TODO add actual repo name
+```
+
+Install dependencies: # TODO add requirements.txt
+```sh
+pip install -r requirements.txt
+```
+
+#### Model Download
+```sh
+python download_models.py
+```
+
+#### Run Test Example
+```sh
+python test.py
+```
+
+# Authors
+TODO: check authors list
 <B>Project Leader:</B> Denis Dimitrov. </br>
 <B>Scientific Advisors:</B> Andrey Kuznetsov, Sergey Markov.</br>
 <B>Training Pipeline & Model Pretrain & Model Distillation:</B> Vladimir Arkhipkin, Lev Novitskiy, Maria Kovaleva. </br>
