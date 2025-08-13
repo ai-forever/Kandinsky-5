@@ -16,7 +16,7 @@ In this repository, we provide a family of diffusion models to generate a video 
 
 ## Project Updates
 
-- 🔥 **Source**: ```2025/08/XX```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 T2V` text-to-video generation model. Released checkpoints: flash_5s_pretrain, nabla_10s_pretrain, flash_5s_sft, nabla_10s_sft, flash_5s_distil (flash_... checkpoints are the the base model checkpoints, nabla_... is the faster model checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm)
+- 🔥 **Source**: ```2025/08/XX```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 T2V` text-to-video generation model. Released checkpoints: `flash_5s_pretrain`, `nabla_10s_pretrain`, `flash_5s_sft`, `nabla_10s_sft`, `flash_5s_distil` (flash_... checkpoints are the the base model checkpoints, nabla_... is the faster model checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm)
 
 ## Table of contents
 <ul>
