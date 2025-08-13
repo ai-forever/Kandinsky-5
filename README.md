@@ -33,7 +33,7 @@ In this repository, we provide a family of diffusion models to generate a video 
 <table border="0" style="width: 200; text-align: left; margin-top: 20px;">
   <tr>
       <td>
-          <video src="" width=200 controls autoplay loop></video>
+          <video src="https://github.com/gen-ai-team/kandinsky-5-inference/blob/main/assets/generation_examples/1036335634.mp4" width=200 controls autoplay loop></video>
       </td>
       <td>
           <video src="" width=200 controls autoplay loop></video>
