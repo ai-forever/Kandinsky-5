@@ -109,25 +109,25 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
     - [x] Multi-GPU Inference code of the 2B models
     - [x] Checkpoints 2B models: pretrain
     - [x] Checkpoints 2B models: sft
-    - [] Checkpoints 2B models: rl
+    - [ ] Checkpoints 2B models: rl
     - [x] Checkpoints 2B models: distil
     - [x] ComfyUI integration
-    - [] Diffusers integration
+    - [ ] Diffusers integration
 - Kandinsky 5.0 Lite Image-to-Video
-    - [] Multi-GPU Inference code of the 2B model
-    - [] Checkpoints of the 2B model
-    - [] ComfyUI integration
-    - [] Diffusers integration
+    - [ ] Multi-GPU Inference code of the 2B model
+    - [ ] Checkpoints of the 2B model
+    - [ ] ComfyUI integration
+    - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Text-to-Video
-    - [] Multi-GPU Inference code of the 2B models
-    - [] Checkpoints 2B models
-    - [] ComfyUI integration
-    - [] Diffusers integration
+    - [ ] Multi-GPU Inference code of the 2B models
+    - [ ] Checkpoints 2B models
+    - [ ] ComfyUI integration
+    - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Image-to-Video
-    - [] Multi-GPU Inference code of the 2B model
-    - [] Checkpoints of the 2B model
-    - [] ComfyUI integration
-    - [] Diffusers integration
+    - [ ] Multi-GPU Inference code of the 2B model
+    - [ ] Checkpoints of the 2B model
+    - [ ] ComfyUI integration
+    - [ ] Diffusers integration
 
 # Authors
 
