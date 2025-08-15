@@ -49,11 +49,11 @@ def get_T2V_pipeline(
     os.makedirs(cache_dir, exist_ok=True)
 
     if dit_path is None and conf_path is None:
-        # dit_path = snapshot_download(
-        #     repo_id="", # TODO add hf repo
-        #     allow_patterns="model/*",
-        #     local_dir=cache_dir,
-        # )
+        dit_path = snapshot_download(
+            repo_id="ai-forever/kandinsky-5",
+            allow_patterns="model/*",
+            local_dir=cache_dir,
+        )
         dit_path = os.path.join(cache_dir, "model/flash_5s_sft.safetensors")
 
     if vae_path is None and conf_path is None:
