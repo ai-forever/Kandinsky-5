@@ -1,0 +1,599 @@
+{
+  "last_node_id": 70,
+  "last_link_id": 133,
+  "nodes": [
+    {
+      "id": 60,
+      "type": "KandyVAEDecode",
+      "pos": [
+        952.004638671875,
+        176.70350646972656
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 119
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 116
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            118
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "KandyVAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 62,
+      "type": "loadVAEKandy",
+      "pos": [
+        839.676025390625,
+        -16.45267105102539
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            119
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "loadVAEKandy"
+      },
+      "widgets_values": [
+        "hunyuan_vae"
+      ]
+    },
+    {
+      "id": 65,
+      "type": "KandyTextEncode",
+      "pos": [
+        195.3511505126953,
+        434.33526611328125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 124
+        },
+        {
+          "name": "extended_text",
+          "type": "PROMPT",
+          "shape": 7,
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "links": [
+            125
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "links": [
+            126
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "KandyTextEncode"
+      },
+      "widgets_values": [
+        "\"Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards\""
+      ]
+    },
+    {
+      "id": 48,
+      "type": "loadTextEmbeddersKandy",
+      "pos": [
+        -680.7980346679688,
+        183.0094757080078
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            121,
+            124,
+            130
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "loadTextEmbeddersKandy"
+      },
+      "widgets_values": [
+        "qwen2_5_vl_7b_instruct",
+        "clip_text"
+      ]
+    },
+    {
+      "id": 70,
+      "type": "ShowText",
+      "pos": [
+        -280.5826110839844,
+        354.2358703613281
+      ],
+      "size": [
+        391.5,
+        237.22247314453125
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 133
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "shape": 6,
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-show-text",
+        "ver": "b5e6f55fc69516f2c20553b516e9ace8ff7d8987",
+        "Node name for S&R": "ShowText",
+        "aux_id": "fairy-root/ComfyUI-Show-Text"
+      },
+      "widgets_values": [
+        "",
+        "A sleek red sports car, its vibrant color contrasting sharply against the dark, ominous sky, speeds along a winding highway during a fierce thunderstorm. The car's powerful engine roars as it navigates through heavy rain and gusty winds, its headlights piercing through the dense clouds. The surrounding landscape is shrouded in a dramatic, moody atmosphere, with lightning illuminating the night sky intermittently, casting eerie shadows on the wet asphalt. The car's aerodynamic design cuts through the air, leaving a trail of water droplets behind as it accelerates. The tires grip the slick road, their sound muffled by the storm but unmistakable. The driver, though unseen, appears focused and determined, maneuvering the vehicle with precision amidst the chaos of nature. The camera follows the car closely, capturing its dynamic movement and the intense energy of the storm around it."
+      ]
+    },
+    {
+      "id": 64,
+      "type": "KandyTextEncode",
+      "pos": [
+        187.28463745117188,
+        164.5115966796875
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 121
+        },
+        {
+          "name": "extended_text",
+          "type": "PROMPT",
+          "shape": 7,
+          "link": 131
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "links": [
+            122
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "links": [
+            123
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "KandyTextEncode"
+      },
+      "widgets_values": [
+        "Big crab sitting on the bench"
+      ]
+    },
+    {
+      "id": 68,
+      "type": "expand_prompt",
+      "pos": [
+        -299.7406311035156,
+        56.33623123168945
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 130
+        }
+      ],
+      "outputs": [
+        {
+          "name": "exp_prompt",
+          "type": "PROMPT",
+          "links": [
+            131
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "log",
+          "type": "STRING",
+          "links": [
+            133
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "expand_prompt"
+      },
+      "widgets_values": [
+        "red sport car moving by the higway road through the thunderstorm"
+      ]
+    },
+    {
+      "id": 54,
+      "type": "SaveAnimatedWEBP",
+      "pos": [
+        1196.7989501953125,
+        118.51814270019531
+      ],
+      "size": [
+        616.9959716796875,
+        569.41552734375
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 118
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.26"
+      },
+      "widgets_values": [
+        "ComfyUI",
+        24,
+        false,
+        100,
+        "default",
+        ""
+      ]
+    },
+    {
+      "id": 51,
+      "type": "KandyGenerate",
+      "pos": [
+        769.4874267578125,
+        279.0058898925781
+      ],
+      "size": [
+        400,
+        332
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 120
+        },
+        {
+          "name": "positive_emb",
+          "type": "CONDITION",
+          "link": 122
+        },
+        {
+          "name": "positive_clip",
+          "type": "CONDITION",
+          "link": 123
+        },
+        {
+          "name": "negative_emb",
+          "type": "CONDITION",
+          "link": 125
+        },
+        {
+          "name": "negative_clip",
+          "type": "CONDITION",
+          "link": 126
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            116
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "a",
+          "type": "A",
+          "links": null
+        },
+        {
+          "name": "t",
+          "type": "T",
+          "links": null,
+          "slot_index": 2
+        },
+        {
+          "name": "e",
+          "type": "E",
+          "links": null
+        },
+        {
+          "name": "n",
+          "type": "N",
+          "links": null,
+          "slot_index": 4
+        },
+        {
+          "name": "t",
+          "type": "T",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "KandyGenerate"
+      },
+      "widgets_values": [
+        50,
+        768,
+        512,
+        31,
+        5,
+        5,
+        "full"
+      ]
+    },
+    {
+      "id": 63,
+      "type": "loadDiTKandy",
+      "pos": [
+        436.34295654296875,
+        22.903823852539062
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            120
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "loadDiTKandy"
+      },
+      "widgets_values": [
+        "2B_sft.safetensors"
+      ]
+    }
+  ],
+  "links": [
+    [
+      116,
+      51,
+      0,
+      60,
+      1,
+      "LATENT"
+    ],
+    [
+      118,
+      60,
+      0,
+      54,
+      0,
+      "IMAGE"
+    ],
+    [
+      119,
+      62,
+      0,
+      60,
+      0,
+      "MODEL"
+    ],
+    [
+      120,
+      63,
+      0,
+      51,
+      0,
+      "MODEL"
+    ],
+    [
+      121,
+      48,
+      0,
+      64,
+      0,
+      "MODEL"
+    ],
+    [
+      122,
+      64,
+      0,
+      51,
+      1,
+      "CONDITION"
+    ],
+    [
+      123,
+      64,
+      1,
+      51,
+      2,
+      "CONDITION"
+    ],
+    [
+      124,
+      48,
+      0,
+      65,
+      0,
+      "MODEL"
+    ],
+    [
+      125,
+      65,
+      0,
+      51,
+      3,
+      "CONDITION"
+    ],
+    [
+      126,
+      65,
+      1,
+      51,
+      4,
+      "CONDITION"
+    ],
+    [
+      130,
+      48,
+      0,
+      68,
+      0,
+      "MODEL"
+    ],
+    [
+      131,
+      68,
+      0,
+      64,
+      1,
+      "PROMPT"
+    ],
+    [
+      133,
+      68,
+      1,
+      70,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8800000000000013,
+      "offset": [
+        378.2827546508358,
+        12.36168215303321
+      ]
+    }
+  },
+  "version": 0.4
+}
