@@ -163,4 +163,4 @@ TODO: check authors list
 <B>Model Architecture:</B> Vladimir Arkhipkin, Maria Kovaleva, Arsen Kuzhamuratov, Nikolay Gerasimenko, Mikhail Zhirnov, Alexander Gambashidze, Konstantin Sobolev.</br>
 <B>Data Pipeline:</B> Ivan Kirillov, Andrei Shutkin, Kirill Chernishev, Julia Agafonova, Elizaveta Dakhova, Denis Parkhomenko.</br>
 <B>Quality Assessment:</B> Nikolay Gerasimenko, Anna Averchenkova, Victor Panshin, Vladislav Veselov, Pavel Perminov, Vladislav Rodionov, Sergey Skachkov, Stepan Ponomarev.</br>
-<B>Other Contributors:</B> Viacheslav Vasilev, Andrei Filatov, Gregory Leleytner.</br>
+<B>Other Contributors:</B> Viacheslav Vasilev, Gregory Leleytner.</br>
