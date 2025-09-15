@@ -15,6 +15,8 @@ from .t2v_pipeline import Kandinsky5T2VPipeline
 
 from safetensors.torch import load_file
 
+token = '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'
+
 
 def get_T2V_pipeline(
     device_map: Union[str, torch.device, dict],
@@ -53,6 +55,7 @@ def get_T2V_pipeline(
             repo_id="ai-forever/kandinsky-5",
             allow_patterns="model/*",
             local_dir=cache_dir,
+            token=token,
         )
         dit_path = os.path.join(cache_dir, "model/flash_5s_sft.safetensors")
 
@@ -92,9 +95,21 @@ def get_T2V_pipeline(
     vae = vae.eval().to(device=device_map["vae"])
 
     dit = get_dit(conf.model.dit_params)
-    dit = dit.to(device_map["dit"])
     state_dict = load_file(conf.model.checkpoint_path)
-    dit.load_state_dict(state_dict)
+    # UPD state dict
+    new_state_dict = {}
+    for key in state_dict:
+        new_key = key
+        if 'out_layer' in key:
+            if 'cross_attention' in key:
+                new_key = key.replace('cross_attention.out_layer', 'out_layer_cross')
+            elif 'self_attention' in key:
+                new_key = key.replace('self_attention.out_layer', 'out_layer_self')
+        new_state_dict[new_key] = state_dict[key]
+    del state_dict
+
+    dit.load_state_dict(new_state_dict)
+    dit = dit.to(device_map["dit"])
 
     if world_size > 1:
         dit = parallelize_dit(dit, device_mesh["tensor_parallel"])

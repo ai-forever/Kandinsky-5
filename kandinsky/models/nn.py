@@ -14,6 +14,7 @@ try:
     FA3 = True
 except:
     FA3 = False
+print(f'FA3 {FA3}')
 
 flex = torch.compile(flex_attention, mode="max-autotune-no-cudagraphs", dynamic=True)
 # flex = torch.compile(flex_attention, dynamic=True, fullgraph=True)
@@ -21,19 +22,20 @@ flex = torch.compile(flex_attention, mode="max-autotune-no-cudagraphs", dynamic=
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_scale_shift_norm(norm, x, scale, shift, idx):
-    return norm(x) * (scale.index_select(0, idx) + 1.0) + shift.index_select(0, idx)
+    return (norm(x) * (scale.index_select(0, idx) + 1.0) + shift.index_select(0, idx)).to(torch.bfloat16)
 
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_gate_sum(x, out, gate, idx):
-    return x + gate.index_select(0, idx) * out
+    return (x + gate.index_select(0, idx) * out).to(torch.bfloat16)
 
 
 @torch.autocast(device_type="cuda", enabled=False)
 def apply_rotary(x, rope):
     x_ = x.reshape(*x.shape[:-1], -1, 1, 2).to(torch.float32)
-    x_out = rope[..., 0] * x_[..., 0] + rope[..., 1] * x_[..., 1]
-    return x_out.reshape(*x.shape)
+    # x_out = rope[..., 0] * x_[..., 0] + rope[..., 1] * x_[..., 1]
+    x_out = (rope * x_).sum(dim=-1)
+    return x_out.reshape(*x.shape).to(torch.bfloat16)
 
 
 class TimeEmbeddings(nn.Module):
@@ -121,10 +123,9 @@ class RoPE1D(nn.Module):
     @torch.autocast(device_type="cuda", enabled=False)
     def forward(self, pos):
         args = self.args[pos]
-        rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
-            dim=-1,
-        )
+        cosine = torch.cos(args)
+        sine = torch.sin(args)
+        rope = torch.stack([cosine, -sine, sine, cosine], dim=-1)
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
@@ -156,10 +157,9 @@ class RoPE3D(nn.Module):
             ],
             dim=-1,
         )
-        rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
-            dim=-1,
-        )
+        cosine = torch.cos(args)
+        sine = torch.sin(args)
+        rope = torch.stack([cosine, -sine, sine, cosine], dim=-1)
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
@@ -209,9 +209,8 @@ class MultiheadSelfAttention(nn.Module):
         return q, k
 
     def scaled_dot_product_attention(
-        self, query, key, value, cu_seqlens, return_attn_probs=False
+        self, query, key, value, cu_seqlens, max_seqlen, return_attn_probs=False
     ):
-        max_seqlen = torch.diff(cu_seqlens).max()
         if FA3:
             out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
                 q=query,
@@ -341,6 +340,44 @@ class MultiheadSelfAttention(nn.Module):
         return out
 
 
+class MultiheadSelfAttentionUpd(nn.Module):
+
+    def __init__(self, num_channels, head_dim):
+        super().__init__()
+        assert num_channels % head_dim == 0
+        self.num_heads = num_channels // head_dim
+
+        self.to_query = nn.Linear(num_channels, num_channels, bias=True)
+        self.to_key = nn.Linear(num_channels, num_channels, bias=True)
+        self.to_value = nn.Linear(num_channels, num_channels, bias=True)
+        self.query_norm = nn.RMSNorm(head_dim)
+        self.key_norm = nn.RMSNorm(head_dim)
+
+    def get_qkv(self, x):
+        query = self.to_query(x)
+        key = self.to_key(x)
+        value = self.to_value(x)
+        
+        shape = query.shape[:-1] # for TP compatibility
+        query = query.reshape(*shape, self.num_heads, -1)
+        key = key.reshape(*shape, self.num_heads, -1)
+        value = value.reshape(*shape, self.num_heads, -1)
+
+        return query, key, value
+
+    def norm_qk(self, q, k):
+        q = self.query_norm(q.float()).type_as(q)
+        k = self.key_norm(k.float()).type_as(k)
+        return q, k
+
+    def forward(self, x, rope):
+        query, key, value = self.get_qkv(x)
+        query, key = self.norm_qk(query, key)
+        query = apply_rotary(query, rope)
+        key = apply_rotary(key, rope)
+        return query, key, value
+
+
 class MultiheadCrossAttention(nn.Module):
     def __init__(self, num_channels, head_dim):
         super().__init__()
@@ -373,20 +410,29 @@ class MultiheadCrossAttention(nn.Module):
         return q, k
 
     def scaled_dot_product_attention(
-        self, query, key, value, cu_seqlens, cond_cu_seqlens, return_attn_probs=False
+        self, query, key, value, cu_seqlens, cond_cu_seqlens, max_seqlen, cond_max_seqlen, return_attn_probs=False
     ):
-        max_seqlen = torch.diff(cu_seqlens).max()
-        cond_max_seqlen = torch.diff(cond_cu_seqlens).max()
-        out, softmax_lse, _ = flash_attn_varlen_func(
-            query,
-            key,
-            value,
-            cu_seqlens,
-            cond_cu_seqlens,
-            max_seqlen,
-            cond_max_seqlen,
-            return_attn_probs=True,
-        )
+        if FA3:
+            out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
+                q=query,
+                k=key,
+                v=value,
+                cu_seqlens_q=cu_seqlens,
+                cu_seqlens_k=cond_cu_seqlens,
+                max_seqlen_q=max_seqlen,
+                max_seqlen_k=cond_max_seqlen)
+            #print(out.shape)
+        else:
+            out, softmax_lse, _ = flash_attn_varlen_func(
+                query,
+                key,
+                value,
+                cu_seqlens,
+                cond_cu_seqlens,
+                max_seqlen,
+                cond_max_seqlen,
+                return_attn_probs=True,
+            )
         out = out.flatten(-2, -1)
 
         if return_attn_probs:
@@ -402,6 +448,42 @@ class MultiheadCrossAttention(nn.Module):
         )
         out = self.out_layer(out)
         return out
+
+
+class MultiheadCrossAttentionUpd(nn.Module):
+
+    def __init__(self, num_channels, head_dim):
+        super().__init__()
+        assert num_channels % head_dim == 0
+        self.num_heads = num_channels // head_dim
+
+        self.to_query = nn.Linear(num_channels, num_channels, bias=True)
+        self.to_key = nn.Linear(num_channels, num_channels, bias=True)
+        self.to_value = nn.Linear(num_channels, num_channels, bias=True)
+        self.query_norm = nn.RMSNorm(head_dim)
+        self.key_norm = nn.RMSNorm(head_dim)
+
+    def get_qkv(self, x, cond):
+        query = self.to_query(x)
+        key = self.to_key(cond)
+        value = self.to_value(cond)
+
+        shape, cond_shape = query.shape[:-1], key.shape[:-1] #change order for TP compatibility
+        query = query.reshape(*shape, self.num_heads, -1)
+        key = key.reshape(*cond_shape, self.num_heads, -1)
+        value = value.reshape(*cond_shape, self.num_heads, -1)
+
+        return query, key, value
+
+    def norm_qk(self, q, k):
+        q = self.query_norm(q.float()).type_as(q)
+        k = self.key_norm(k.float()).type_as(k)
+        return q, k
+
+    def forward(self, x, cond):
+        query, key, value = self.get_qkv(x, cond)
+        query, key = self.norm_qk(query, key)
+        return query, key, value
 
 
 class FeedForward(nn.Module):
