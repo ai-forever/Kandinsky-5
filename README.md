@@ -152,7 +152,7 @@ python download_models.py
 
 #### Run Test Example
 ```sh
-python test.py
+python test.py --width 768 --height 512 --prompt "A dog in red hat"
 ```
 
 # Authors
