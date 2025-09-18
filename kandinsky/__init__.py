@@ -54,7 +54,7 @@ def get_T2V_pipeline(
             allow_patterns="model/*",
             local_dir=cache_dir,
         )
-        dit_path = os.path.join(cache_dir, "model/flash_5s_sft.safetensors")
+        dit_path = os.path.join(cache_dir, "model/lite_sft_5s.safetensors")
 
     if vae_path is None and conf_path is None:
         vae_path = snapshot_download(
