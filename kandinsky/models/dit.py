@@ -11,8 +11,6 @@ from .nn import (
     Modulation,
     MultiheadSelfAttention,
     MultiheadCrossAttention,
-    MultiheadSelfAttentionUpd,
-    MultiheadCrossAttentionUpd,
     FeedForward,
     OutLayer,
     apply_scale_shift_norm,
@@ -27,15 +25,16 @@ class TransformerEncoderBlock(nn.Module):
         self.text_modulation = Modulation(time_dim, model_dim, 6)
 
         self.self_attention_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
-        self.self_attention = MultiheadSelfAttentionUpd(model_dim, head_dim)
+        self.self_attention = MultiheadSelfAttention(model_dim, head_dim)
         self.out_layer_self = nn.Linear(model_dim, model_dim, bias=True)
 
         self.feed_forward_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.feed_forward = FeedForward(model_dim, ff_dim)
 
+    @torch.compiler.disable
     def scaled_dot_product_attention(
         self, query, key, value, cu_seqlens, cond_cu_seqlens, max_seqlen, cond_max_seqlen):
-        out, _ = flash_attn_varlen_func(
+        out = flash_attn_varlen_func(
             q=query,
             k=key,
             v=value,
@@ -47,7 +46,12 @@ class TransformerEncoderBlock(nn.Module):
         return out
 
     def forward(self, x, time_embed, rope, cu_seqlens, max_seqlen, time_embed_idx):
-        def first_step(time_embed, x, time_embed_idx):
+        """
+            Forward function is separated to three parts: pre-attention, attention and post-attention.
+            This is done for better torch.compile performance, as Flash Attention 3 breaks compile graph currently.
+            This workaround can be changed in the future.
+        """
+        def _pre_attention(time_embed, x, time_embed_idx):
             self_attn_params, ff_params = torch.chunk(self.text_modulation(time_embed), 2, dim=-1)
 
             shift, scale, gate = torch.chunk(self_attn_params, 3, dim=-1)
@@ -57,28 +61,27 @@ class TransformerEncoderBlock(nn.Module):
             return query, key, value, gate, ff_params
 
         # before self attention, compile
-        query, key, value, gate, ff_params = first_step(time_embed, x, time_embed_idx)
+        query, key, value, gate, ff_params = _pre_attention(time_embed, x, time_embed_idx)
 
-        # fa3 self, wo compile
+        # fa3 self, w/o compile
         out = self.scaled_dot_product_attention(
             query, key, value, cu_seqlens, cu_seqlens, max_seqlen, max_seqlen)
 
-        def second_step(x, out, gate, time_embed_idx, ff_params):
+        def _post_attention(x, out, gate, time_embed_idx, ff_params):
             out = out.flatten(-2, -1)
             out = self.out_layer_self(out)
 
             x = apply_gate_sum(x, out, gate, time_embed_idx)
 
             shift, scale, gate = torch.chunk(ff_params, 3, dim=-1)
-            out = apply_scale_shift_norm(self.feed_forward_norm, x, scale, shift, time_embed_idx)#.type_as(x)
+            out = apply_scale_shift_norm(self.feed_forward_norm, x, scale, shift, time_embed_idx)
             out = self.feed_forward(out)
             x = apply_gate_sum(x, out, gate, time_embed_idx)
             return x
 
         # after self attention, compile
-        x = second_step(x, out, gate, time_embed_idx, ff_params)
+        x = _post_attention(x, out, gate, time_embed_idx, ff_params)
         return x
-
 
 class TransformerDecoderBlock(nn.Module):
     def __init__(self, model_dim, time_dim, ff_dim, head_dim):
@@ -86,19 +89,20 @@ class TransformerDecoderBlock(nn.Module):
         self.visual_modulation = Modulation(time_dim, model_dim, 9)
 
         self.self_attention_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
-        self.self_attention = MultiheadSelfAttentionUpd(model_dim, head_dim)
+        self.self_attention = MultiheadSelfAttention(model_dim, head_dim)
         self.out_layer_self = nn.Linear(model_dim, model_dim, bias=True)
 
         self.cross_attention_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
-        self.cross_attention = MultiheadCrossAttentionUpd(model_dim, head_dim)
+        self.cross_attention = MultiheadCrossAttention(model_dim, head_dim)
         self.out_layer_cross = nn.Linear(model_dim, model_dim, bias=True)
 
         self.feed_forward_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.feed_forward = FeedForward(model_dim, ff_dim)
 
+    @torch.compiler.disable
     def scaled_dot_product_attention(
         self, query, key, value, cu_seqlens, cond_cu_seqlens, max_seqlen, cond_max_seqlen):
-        out, _ = flash_attn_varlen_func(
+        out = flash_attn_varlen_func(
             q=query,
             k=key,
             v=value,
@@ -111,61 +115,66 @@ class TransformerDecoderBlock(nn.Module):
 
     def forward(
         self, visual_embed, text_embed, time_embed, rope, visual_cu_seqlens, text_cu_seqlens, max_seqlen, 
-        cond_max_seqlen, time_embed_idx, block_mask, torch_mask, sparse_params
-    ):
-        def first_step(time_embed, visual_embed, time_embed_idx):
+        cond_max_seqlen, time_embed_idx, block_mask, torch_mask, sparse_params):
+        """
+            Forward function is separated to five parts: 
+                pre-attention, self-attention and post-self-attention, cross-attention and post-cross-attention.
+            This is done for better torch.compile performance, as Flash Attention 3 breaks compile graph currently.
+            This workaround can be changed in the future.
+        """
+        def _pre_attention(time_embed, visual_embed, time_embed_idx):
             self_attn_params, cross_attn_params, ff_params = torch.chunk(
                 self.visual_modulation(time_embed), 3, dim=-1)
 
             shift, scale, gate = torch.chunk(self_attn_params, 3, dim=-1)
             visual_out = apply_scale_shift_norm(
-                self.self_attention_norm, visual_embed, scale, shift, time_embed_idx)#.type_as(visual_embed)
+                self.self_attention_norm, visual_embed, scale, shift, time_embed_idx)
 
             query, key, value = self.self_attention(visual_out, rope)
             return query, key, value, gate, cross_attn_params, ff_params
 
         # before self attention, compile
-        query, key, value, gate, cross_attn_params, ff_params = first_step(
+        query, key, value, gate, cross_attn_params, ff_params = _pre_attention(
             time_embed, visual_embed, time_embed_idx)
 
-        # fa3 self, wo compile
+        # fa3 self, w/o compile
         visual_out = self.scaled_dot_product_attention(
             query, key, value, visual_cu_seqlens, visual_cu_seqlens, max_seqlen, max_seqlen)
 
-        def second_step(visual_out, visual_embed, gate, time_embed_idx, cross_attn_params):
+        def _post_self_attention(visual_out, visual_embed, gate, time_embed_idx, cross_attn_params):
             visual_out = visual_out.flatten(-2, -1)
             visual_out = self.out_layer_self(visual_out)
-            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)#.type_as(visual_embed)
+            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)
 
             shift, scale, gate = torch.chunk(cross_attn_params, 3, dim=-1)
             visual_out = apply_scale_shift_norm(
-                self.cross_attention_norm, visual_embed, scale, shift, time_embed_idx)#.type_as(visual_embed)
+                self.cross_attention_norm, visual_embed, scale, shift, time_embed_idx)
             query, key, value = self.cross_attention(visual_out, text_embed)
             return query, key, value, gate, visual_embed
 
         # after self attention + before cross attention, compile
-        query, key, value, gate, visual_embed = second_step(
+        query, key, value, gate, visual_embed = _post_self_attention(
             visual_out, visual_embed, gate, time_embed_idx, cross_attn_params)
 
-        # fa3 cross, wo compile
+        # fa3 cross, w/o compile
         visual_out = self.scaled_dot_product_attention(
             query, key, value, visual_cu_seqlens, text_cu_seqlens, max_seqlen, cond_max_seqlen)
 
-        def third_step(visual_embed, visual_out, gate, time_embed_idx, ff_params):
+        def _post_cross_attention(visual_embed, visual_out, gate, time_embed_idx, ff_params):
             visual_out = visual_out.flatten(-2, -1)
             visual_out = self.out_layer_cross(visual_out)
 
-            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)#.type_as(visual_embed)
+            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)
 
             shift, scale, gate = torch.chunk(ff_params, 3, dim=-1)
             visual_out = apply_scale_shift_norm(
-                self.feed_forward_norm, visual_embed, scale, shift, time_embed_idx)#.type_as(visual_embed)
+                self.feed_forward_norm, visual_embed, scale, shift, time_embed_idx)
             visual_out = self.feed_forward(visual_out)
-            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)#.type_as(visual_embed)
+            visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)
             return visual_embed
 
         # after cross attention, compile
-        visual_embed = third_step(visual_embed, visual_out, gate, time_embed_idx, ff_params)
+        visual_embed = _post_cross_attention(visual_embed, visual_out, gate, time_embed_idx, ff_params)
         return visual_embed
 
 
