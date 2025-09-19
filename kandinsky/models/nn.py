@@ -2,22 +2,8 @@ import math
 
 import torch
 from torch import nn
-from flash_attn import flash_attn_varlen_qkvpacked_func, flash_attn_varlen_func
 
 from .utils import get_freqs
-from torch.nn.attention.flex_attention import flex_attention
-from .utils import nablaT_v2_doc, nablaT_v2_doc_mfcausal
-
-try:
-    import flash_attn_interface
-    FA3 = True
-except:
-    FA3 = False
-print(f'FA3 {FA3}')
-
-flex = torch.compile(flex_attention, mode="max-autotune-no-cudagraphs", dynamic=True)
-# flex = torch.compile(flex_attention, dynamic=True, fullgraph=True)
-
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_scale_shift_norm(norm, x, scale, shift, idx):
@@ -32,7 +18,6 @@ def apply_gate_sum(x, out, gate, idx):
 @torch.autocast(device_type="cuda", enabled=False)
 def apply_rotary(x, rope):
     x_ = x.reshape(*x.shape[:-1], -1, 1, 2).to(torch.float32)
-    # x_out = rope[..., 0] * x_[..., 0] + rope[..., 1] * x_[..., 1]
     x_out = (rope * x_).sum(dim=-1)
     return x_out.reshape(*x.shape).to(torch.bfloat16)
 
@@ -193,7 +178,7 @@ class MultiheadSelfAttention(nn.Module):
         query = self.to_query(x)
         key = self.to_key(x)
         value = self.to_value(x)
-        
+
         shape = query.shape[:-1] # for TP compatibility
         query = query.reshape(*shape, self.num_heads, -1)
         key = key.reshape(*shape, self.num_heads, -1)
