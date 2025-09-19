@@ -46,11 +46,6 @@ class TransformerEncoderBlock(nn.Module):
         return out
 
     def forward(self, x, time_embed, rope, cu_seqlens, max_seqlen, time_embed_idx):
-        """
-            Forward function is separated to three parts: pre-attention, attention and post-attention.
-            This is done for better torch.compile performance, as Flash Attention 3 breaks compile graph currently.
-            This workaround can be changed in the future.
-        """
         def _pre_attention(time_embed, x, time_embed_idx):
             self_attn_params, ff_params = torch.chunk(self.text_modulation(time_embed), 2, dim=-1)
 
@@ -60,10 +55,8 @@ class TransformerEncoderBlock(nn.Module):
             query, key, value = self.self_attention(out, rope)
             return query, key, value, gate, ff_params
 
-        # before self attention, compile
         query, key, value, gate, ff_params = _pre_attention(time_embed, x, time_embed_idx)
 
-        # fa3 self, w/o compile
         out = self.scaled_dot_product_attention(
             query, key, value, cu_seqlens, cu_seqlens, max_seqlen, max_seqlen)
 
@@ -79,7 +72,6 @@ class TransformerEncoderBlock(nn.Module):
             x = apply_gate_sum(x, out, gate, time_embed_idx)
             return x
 
-        # after self attention, compile
         x = _post_attention(x, out, gate, time_embed_idx, ff_params)
         return x
 
@@ -116,12 +108,6 @@ class TransformerDecoderBlock(nn.Module):
     def forward(
         self, visual_embed, text_embed, time_embed, rope, visual_cu_seqlens, text_cu_seqlens, max_seqlen, 
         cond_max_seqlen, time_embed_idx, block_mask, torch_mask, sparse_params):
-        """
-            Forward function is separated to five parts: 
-                pre-attention, self-attention and post-self-attention, cross-attention and post-cross-attention.
-            This is done for better torch.compile performance, as Flash Attention 3 breaks compile graph currently.
-            This workaround can be changed in the future.
-        """
         def _pre_attention(time_embed, visual_embed, time_embed_idx):
             self_attn_params, cross_attn_params, ff_params = torch.chunk(
                 self.visual_modulation(time_embed), 3, dim=-1)
@@ -133,11 +119,9 @@ class TransformerDecoderBlock(nn.Module):
             query, key, value = self.self_attention(visual_out, rope)
             return query, key, value, gate, cross_attn_params, ff_params
 
-        # before self attention, compile
         query, key, value, gate, cross_attn_params, ff_params = _pre_attention(
             time_embed, visual_embed, time_embed_idx)
 
-        # fa3 self, w/o compile
         visual_out = self.scaled_dot_product_attention(
             query, key, value, visual_cu_seqlens, visual_cu_seqlens, max_seqlen, max_seqlen)
 
@@ -152,11 +136,9 @@ class TransformerDecoderBlock(nn.Module):
             query, key, value = self.cross_attention(visual_out, text_embed)
             return query, key, value, gate, visual_embed
 
-        # after self attention + before cross attention, compile
         query, key, value, gate, visual_embed = _post_self_attention(
             visual_out, visual_embed, gate, time_embed_idx, cross_attn_params)
 
-        # fa3 cross, w/o compile
         visual_out = self.scaled_dot_product_attention(
             query, key, value, visual_cu_seqlens, text_cu_seqlens, max_seqlen, cond_max_seqlen)
 
@@ -173,7 +155,6 @@ class TransformerDecoderBlock(nn.Module):
             visual_embed = apply_gate_sum(visual_embed, visual_out, gate, time_embed_idx)
             return visual_embed
 
-        # after cross attention, compile
         visual_embed = _post_cross_attention(visual_embed, visual_out, gate, time_embed_idx, ff_params)
         return visual_embed
 
