@@ -1,11 +1,12 @@
 metrics:
+  scheduler_scale: 5
   scale_factor:
   - 1.0
   - 2.0
   - 2.0
   resolution: 512
 model:
-  checkpoint_path: "./weights/model/flash_5s_distil.safetensors"
+  checkpoint_path: "./weights/model/lite_sft_10s.safetensors"
   dit_params:
     in_visual_dim: 16
     out_visual_dim: 16
@@ -26,11 +27,17 @@ model:
     in_text_dim: 3584
     in_text_dim2: 768
   attention:
-    type: flash
+    type: nabla
     causal: false
     local: false
     glob: false
     window: 3
+    P: 0.9
+    wT: 11
+    wW: 3
+    wH: 3
+    add_sta: true
+    method: topcdf
   vae:
     checkpoint_path: "./weights/vae/"
     name: "hunyuan"

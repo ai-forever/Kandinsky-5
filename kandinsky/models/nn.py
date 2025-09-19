@@ -212,15 +212,28 @@ class MultiheadSelfAttention(nn.Module):
         self, query, key, value, cu_seqlens, max_seqlen, return_attn_probs=False
     ):
         if FA3:
-            out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
-                q=query,
-                k=key,
-                v=value,
-                cu_seqlens_q=cu_seqlens,
-                cu_seqlens_k=cu_seqlens,
-                max_seqlen_q=max_seqlen,
-                max_seqlen_k=max_seqlen,
-            )
+            if return_attn_probs:
+                out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
+                    q=query,
+                    k=key,
+                    v=value,
+                    cu_seqlens_q=cu_seqlens,
+                    cu_seqlens_k=cu_seqlens,
+                    max_seqlen_q=max_seqlen,
+                    max_seqlen_k=max_seqlen,
+                    return_attn_probs=True
+                )
+            else:
+                out = flash_attn_interface.flash_attn_varlen_func(
+                    q=query,
+                    k=key,
+                    v=value,
+                    cu_seqlens_q=cu_seqlens,
+                    cu_seqlens_k=cu_seqlens,
+                    max_seqlen_q=max_seqlen,
+                    max_seqlen_k=max_seqlen,
+                    return_attn_probs=False
+                )
         else:
             query_key_value = torch.stack([query, key, value], dim=-3)
             out, softmax_lse, _ = flash_attn_varlen_qkvpacked_func(

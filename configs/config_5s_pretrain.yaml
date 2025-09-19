@@ -5,7 +5,7 @@ metrics:
   - 2.0
   resolution: 512
 model:
-  checkpoint_path: "./weights/model/flash_5s_pretrain.safetensors"
+  checkpoint_path: "./weights/model/lite_pretrain_5s.safetensors"
   dit_params:
     in_visual_dim: 16
     out_visual_dim: 16
