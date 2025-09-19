@@ -2,38 +2,24 @@ import math
 
 import torch
 from torch import nn
-from flash_attn import flash_attn_varlen_qkvpacked_func, flash_attn_varlen_func
 
 from .utils import get_freqs
-from torch.nn.attention.flex_attention import flex_attention
-from .utils import nablaT_v2_doc, nablaT_v2_doc_mfcausal
-
-try:
-    import flash_attn_interface
-
-    FA3 = True
-except:
-    FA3 = False
-
-flex = torch.compile(flex_attention, mode="max-autotune-no-cudagraphs", dynamic=True)
-# flex = torch.compile(flex_attention, dynamic=True, fullgraph=True)
-
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_scale_shift_norm(norm, x, scale, shift, idx):
-    return norm(x) * (scale.index_select(0, idx) + 1.0) + shift.index_select(0, idx)
+    return (norm(x) * (scale.index_select(0, idx) + 1.0) + shift.index_select(0, idx)).to(torch.bfloat16)
 
 
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_gate_sum(x, out, gate, idx):
-    return x + gate.index_select(0, idx) * out
+    return (x + gate.index_select(0, idx) * out).to(torch.bfloat16)
 
 
 @torch.autocast(device_type="cuda", enabled=False)
 def apply_rotary(x, rope):
     x_ = x.reshape(*x.shape[:-1], -1, 1, 2).to(torch.float32)
-    x_out = rope[..., 0] * x_[..., 0] + rope[..., 1] * x_[..., 1]
-    return x_out.reshape(*x.shape)
+    x_out = (rope * x_).sum(dim=-1)
+    return x_out.reshape(*x.shape).to(torch.bfloat16)
 
 
 class TimeEmbeddings(nn.Module):
@@ -121,10 +107,9 @@ class RoPE1D(nn.Module):
     @torch.autocast(device_type="cuda", enabled=False)
     def forward(self, pos):
         args = self.args[pos]
-        rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
-            dim=-1,
-        )
+        cosine = torch.cos(args)
+        sine = torch.sin(args)
+        rope = torch.stack([cosine, -sine, sine, cosine], dim=-1)
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
@@ -156,10 +141,9 @@ class RoPE3D(nn.Module):
             ],
             dim=-1,
         )
-        rope = torch.stack(
-            [torch.cos(args), -torch.sin(args), torch.sin(args), torch.cos(args)],
-            dim=-1,
-        )
+        cosine = torch.cos(args)
+        sine = torch.sin(args)
+        rope = torch.stack([cosine, -sine, sine, cosine], dim=-1)
         rope = rope.view(*rope.shape[:-1], 2, 2)
         return rope.unsqueeze(-4)
 
@@ -178,6 +162,7 @@ class Modulation(nn.Module):
 
 
 class MultiheadSelfAttention(nn.Module):
+
     def __init__(self, num_channels, head_dim):
         super().__init__()
         assert num_channels % head_dim == 0
@@ -189,14 +174,12 @@ class MultiheadSelfAttention(nn.Module):
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
 
-        self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
-
     def get_qkv(self, x):
         query = self.to_query(x)
         key = self.to_key(x)
         value = self.to_value(x)
 
-        shape = query.shape[:-1]
+        shape = query.shape[:-1] # for TP compatibility
         query = query.reshape(*shape, self.num_heads, -1)
         key = key.reshape(*shape, self.num_heads, -1)
         value = value.reshape(*shape, self.num_heads, -1)
@@ -208,153 +191,16 @@ class MultiheadSelfAttention(nn.Module):
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    def scaled_dot_product_attention(
-        self, query, key, value, cu_seqlens, return_attn_probs=False
-    ):
-        max_seqlen = torch.diff(cu_seqlens).max()
-        if FA3:
-            if return_attn_probs:
-                out, softmax_lse = flash_attn_interface.flash_attn_varlen_func(
-                    q=query,
-                    k=key,
-                    v=value,
-                    cu_seqlens_q=cu_seqlens,
-                    cu_seqlens_k=cu_seqlens,
-                    max_seqlen_q=max_seqlen,
-                    max_seqlen_k=max_seqlen,
-                    return_attn_probs=True
-                )
-            else:
-                out = flash_attn_interface.flash_attn_varlen_func(
-                    q=query,
-                    k=key,
-                    v=value,
-                    cu_seqlens_q=cu_seqlens,
-                    cu_seqlens_k=cu_seqlens,
-                    max_seqlen_q=max_seqlen,
-                    max_seqlen_k=max_seqlen,
-                    return_attn_probs=False
-                )
-        else:
-            query_key_value = torch.stack([query, key, value], dim=-3)
-            out, softmax_lse, _ = flash_attn_varlen_qkvpacked_func(
-                query_key_value, cu_seqlens, max_seqlen, return_attn_probs=True
-            )
-
-        out = out.flatten(-2, -1)
-
-        if return_attn_probs:
-            return out, softmax_lse, None
-        return out
-
-    def attention_flex(
-        self, query, key, value, block_mask, sparse_params=None, return_sparsity=False
-    ):
-        query = query.unsqueeze(0).transpose(1, 2).contiguous()
-        key = key.unsqueeze(0).transpose(1, 2).contiguous()
-        value = value.unsqueeze(0).transpose(1, 2).contiguous()
-        if block_mask is None:
-            T, H, W = sparse_params["visual_shape"]
-            H, W = H // 8, W // 8
-            if "mf" not in sparse_params:
-                block_mask = nablaT_v2_doc(
-                    query,
-                    key,
-                    sparse_params["visual_seqlens"],
-                    T,
-                    H,
-                    W,
-                    wT=sparse_params["wT"],
-                    wH=sparse_params["wH"],
-                    wW=sparse_params["wW"],
-                    thr=sparse_params["P"],
-                    add_sta=sparse_params["add_sta"],
-                    method=sparse_params["method"],
-                )
-            else:
-                block_mask = nablaT_v2_doc_mfcausal(
-                    query,
-                    key,
-                    sparse_params["visual_seqlens"],
-                    T,
-                    H,
-                    W,
-                    wT=sparse_params["wT"],
-                    wH=sparse_params["wH"],
-                    wW=sparse_params["wW"],
-                    thr=sparse_params["P"],
-                    add_sta=sparse_params["add_sta"],
-                    mf=sparse_params["mf"],
-                )
-        out = (
-            flex(
-                query,
-                key,
-                value,
-                block_mask=block_mask,
-            )
-            .transpose(1, 2)
-            .squeeze(0)
-            .contiguous()
-        )
-        out = out.flatten(-2, -1)
-        if return_sparsity:
-            return out, 100.0 * (
-                1
-                - (1 - block_mask.sparsity() / 100)
-                * (sparse_params["visual_seqlens"].shape[0] - 1)
-            )
-        return out
-
-    def attention_torch(self, query, key, value, torch_mask):
-        assert torch_mask.dtype == torch.bool
-
-        query = query.unsqueeze(0).contiguous()
-        key = key.unsqueeze(0).contiguous()
-        value = value.unsqueeze(0).contiguous()
-
-        query, key, value = (
-            query.transpose(1, 2),
-            key.transpose(1, 2),
-            value.transpose(1, 2),
-        )
-        out = (
-            torch.nn.functional.scaled_dot_product_attention(
-                query,
-                key,
-                value,
-                attn_mask=torch_mask,
-            )
-            .transpose(1, 2)
-            .squeeze(0)
-            .contiguous()
-        )
-
-        out = out.flatten(-2, -1)
-        return out
-
-    def forward(
-        self, x, rope, cu_seqlens, block_mask=None, torch_mask=None, sparse_params=None
-    ):
+    def forward(self, x, rope):
         query, key, value = self.get_qkv(x)
         query, key = self.norm_qk(query, key)
-        query = apply_rotary(query, rope).type_as(query)
-        key = apply_rotary(key, rope).type_as(key)
-
-        if block_mask is not None or sparse_params is not None:
-            out = self.attention_flex(
-                query, key, value, block_mask, sparse_params=sparse_params
-            )
-        elif torch_mask is not None:
-            out = self.attention_torch(query, key, value, torch_mask)
-        else:
-            out = self.scaled_dot_product_attention(query, key, value, cu_seqlens)
-
-        out = self.out_layer(out)
-        return out
+        query = apply_rotary(query, rope)
+        key = apply_rotary(key, rope)
+        return query, key, value
 
 
 class MultiheadCrossAttention(nn.Module):
+
     def __init__(self, num_channels, head_dim):
         super().__init__()
         assert num_channels % head_dim == 0
@@ -366,14 +212,12 @@ class MultiheadCrossAttention(nn.Module):
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
 
-        self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
-
     def get_qkv(self, x, cond):
         query = self.to_query(x)
         key = self.to_key(cond)
         value = self.to_value(cond)
 
-        shape, cond_shape = query.shape[:-1], key.shape[:-1]
+        shape, cond_shape = query.shape[:-1], key.shape[:-1] #change order for TP compatibility
         query = query.reshape(*shape, self.num_heads, -1)
         key = key.reshape(*cond_shape, self.num_heads, -1)
         value = value.reshape(*cond_shape, self.num_heads, -1)
@@ -385,36 +229,10 @@ class MultiheadCrossAttention(nn.Module):
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    def scaled_dot_product_attention(
-        self, query, key, value, cu_seqlens, cond_cu_seqlens, return_attn_probs=False
-    ):
-        max_seqlen = torch.diff(cu_seqlens).max()
-        cond_max_seqlen = torch.diff(cond_cu_seqlens).max()
-        out, softmax_lse, _ = flash_attn_varlen_func(
-            query,
-            key,
-            value,
-            cu_seqlens,
-            cond_cu_seqlens,
-            max_seqlen,
-            cond_max_seqlen,
-            return_attn_probs=True,
-        )
-        out = out.flatten(-2, -1)
-
-        if return_attn_probs:
-            return out, softmax_lse, None
-        return out
-
-    def forward(self, x, cond, cu_seqlens, cond_cu_seqlens):
+    def forward(self, x, cond):
         query, key, value = self.get_qkv(x, cond)
         query, key = self.norm_qk(query, key)
-
-        out = self.scaled_dot_product_attention(
-            query, key, value, cu_seqlens, cond_cu_seqlens
-        )
-        out = self.out_layer(out)
-        return out
+        return query, key, value
 
 
 class FeedForward(nn.Module):
