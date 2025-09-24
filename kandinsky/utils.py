@@ -14,6 +14,7 @@ from .models.parallelize import parallelize_dit
 from .t2v_pipeline import Kandinsky5T2VPipeline
 
 from safetensors.torch import load_file
+from peft import LoraConfig, get_peft_model
 
 torch._dynamo.config.suppress_errors = True
 
@@ -26,6 +27,7 @@ def get_T2V_pipeline(
     text_encoder2_path: str = None,
     vae_path: str = None,
     conf_path: str = None,
+    lora_path: str = None,
 ) -> Kandinsky5T2VPipeline:
     assert resolution in [512]
 
@@ -80,9 +82,14 @@ def get_T2V_pipeline(
         text_encoder2_path = os.path.join(cache_dir, "text_encoder2/")
 
     if conf_path is None:
-        conf = get_default_conf(
-            dit_path, vae_path, text_encoder_path, text_encoder2_path
-        )
+        if lora_path is not None:
+            conf = get_default_lora_conf(
+                dit_path, vae_path, text_encoder_path, text_encoder2_path
+            )
+        else:
+            conf = get_default_conf(
+                dit_path, vae_path, text_encoder_path, text_encoder2_path
+            )
     else:
         conf = OmegaConf.load(conf_path)
 
@@ -107,6 +114,26 @@ def get_T2V_pipeline(
     del state_dict
 
     dit.load_state_dict(new_state_dict)
+
+    if getattr(conf, 'lora', None) is not None:
+        lora_config = LoraConfig(**conf.lora)
+        dit = get_peft_model(dit, lora_config)
+        #dit.load_adapter(lora_path, adapter_name='default')
+        lora_weights = torch.load(lora_path)
+        # UPD state dict
+        new_lora_weights = {}
+        for key in lora_weights:
+            new_key = key
+            if 'out_layer' in key:
+                if 'cross_attention' in key:
+                    new_key = key.replace('cross_attention.out_layer', 'out_layer_cross')
+                elif 'self_attention' in key:
+                    new_key = key.replace('self_attention.out_layer', 'out_layer_self')
+            new_lora_weights[new_key] = lora_weights[key]
+        del lora_weights
+
+        dit.load_state_dict(new_lora_weights, strict=False)
+
     dit = dit.to(device_map["dit"])
 
     if world_size > 1:
@@ -179,6 +206,84 @@ def get_default_conf(
             "dit_params": dit_params,
             "attention": attention,
         },
+        "metrics": {"scale_factor": (1, 2, 2)},
+        "resolution": 512,
+    }
+
+    return DictConfig(conf)
+
+
+def get_default_lora_conf(
+    dit_path,
+    vae_path,
+    text_encoder_path,
+    text_encoder2_path,
+) -> DictConfig:
+    dit_params = {
+        "in_visual_dim": 16,
+        "out_visual_dim": 16,
+        "time_dim": 512,
+        "patch_size": [1, 2, 2],
+        "model_dim": 1792,
+        "ff_dim": 7168,
+        "num_text_blocks": 2,
+        "num_visual_blocks": 32,
+        "axes_dims": [16, 24, 24],
+        "visual_cond": True,
+        "in_text_dim": 3584,
+        "in_text_dim2": 768,
+    }
+
+    attention = {
+        "type": "flash",
+        "causal": False,
+        "local": False,
+        "glob": False,
+        "window": 3,
+    }
+
+    vae = {
+        "checkpoint_path": vae_path,
+        "name": "hunyuan",
+    }
+
+    text_embedder = {
+        "qwen": {
+            "emb_size": 3584,
+            "checkpoint_path": text_encoder_path,
+            "max_length": 256,
+        },
+        "clip": {
+            "checkpoint_path": text_encoder2_path,
+            "emb_size": 768,
+            "max_length": 77,
+        },
+    }
+
+    lora = {
+        "r": 64,
+        "target_modules":
+            ["self_attention.to_query",
+             "self_attention.to_key",
+             "self_attention.to_value",
+             "out_layer_self",
+             "cross_attention.to_query",
+             "cross_attention.to_key",
+             "cross_attention.to_value",
+             "out_layer_cross",
+             "feed_forward.in_layer",
+             "feed_forward.out_layer"],
+    }
+
+    conf = {
+        "model": {
+            "checkpoint_path": dit_path,
+            "vae": vae,
+            "text_embedder": text_embedder,
+            "dit_params": dit_params,
+            "attention": attention,
+        },
+        "lora": lora,
         "metrics": {"scale_factor": (1, 2, 2)},
         "resolution": 512,
     }
