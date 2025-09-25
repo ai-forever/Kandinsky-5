@@ -1,6 +1,8 @@
 import numpy as np
-import torch
 from tqdm import tqdm 
+import gc
+
+import torch
 
 from .models.utils import create_doc_causal_mask, fast_doc_causal_sta
 
@@ -269,5 +271,108 @@ def generate_sample(
             images = vae.decode(images).sample
             images = ((images.clamp(-1.0, 1.0) + 1.0) * 127.5).to(torch.uint8)
     torch.cuda.empty_cache()
+
+    return images
+
+
+def clean_mem():
+    torch.cuda.empty_cache()
+    gc.collect()
+
+def generate_sample_lowmem(
+    shape,
+    captions,
+    dit,
+    vae,
+    conf,
+    text_embedder,
+    num_steps=25,
+    guidance_weight=5.0,
+    scheduler_scale=1,
+    negative_caption="",
+    seed=6554,
+    device="cuda",
+    vae_device="cuda",
+    progress=True,
+):
+    bs, duration, height, width, dim = shape
+    if duration == 1:
+        type_of_content = "image"
+    else:
+        type_of_content = "video"
+
+    with torch.no_grad():
+        bs_text_embed, text_cu_seqlens = text_embedder.encode(
+            captions, type_of_content=type_of_content
+        )
+        bs_null_text_embed, null_text_cu_seqlens = text_embedder.encode(
+            [negative_caption] * len(captions), type_of_content=type_of_content
+        )
+
+    text_embedder = text_embedder.to('cpu')
+    clean_mem()
+
+    for key in bs_text_embed:
+        bs_text_embed[key] = bs_text_embed[key].to(device=device)
+        bs_null_text_embed[key] = bs_null_text_embed[key].to(device=device)
+    text_cu_seqlens = text_cu_seqlens.to(device=device)
+    null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)
+
+    visual_cu_seqlens = duration * torch.arange(
+        bs + 1, dtype=torch.int32, device=device
+    )
+    visual_rope_pos = [
+        torch.cat([torch.arange(end) for end in torch.diff(visual_cu_seqlens).cpu()]),
+        torch.arange(shape[-3] // conf.model.dit_params.patch_size[1]),
+        torch.arange(shape[-2] // conf.model.dit_params.patch_size[2]),
+    ]
+    text_rope_pos = torch.cat(
+        [torch.arange(end) for end in torch.diff(text_cu_seqlens).cpu()]
+    )
+    null_text_rope_pos = torch.cat(
+        [torch.arange(end) for end in torch.diff(null_text_cu_seqlens).cpu()]
+    )
+
+    dit = dit.to(device, non_blocking=True)
+    with torch.no_grad():
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            latent_visual = generate(
+                dit,
+                device,
+                (bs * duration, height, width, dim),
+                num_steps,
+                bs_text_embed,
+                bs_null_text_embed,
+                visual_cu_seqlens,
+                text_cu_seqlens,
+                null_text_cu_seqlens,
+                visual_rope_pos,
+                text_rope_pos,
+                null_text_rope_pos,
+                guidance_weight,
+                scheduler_scale,
+                conf,
+                seed=seed,
+                progress=progress,
+            )
+    dit = dit.to('cpu', non_blocking=True)
+    clean_mem()
+
+    vae = vae.to(vae_device, non_blocking=True)
+    with torch.no_grad():
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            images = latent_visual.reshape(
+                bs,
+                -1,
+                latent_visual.shape[-3],
+                latent_visual.shape[-2],
+                latent_visual.shape[-1],
+            )
+            images = images.to(device=vae_device)
+            images = (images / vae.config.scaling_factor).permute(0, 4, 1, 2, 3)
+            images = vae.decode(images).sample
+            images = ((images.clamp(-1.0, 1.0) + 1.0) * 127.5).to(torch.uint8)
+    vae = vae.to('cpu', non_blocking=True)
+    clean_mem()
 
     return images

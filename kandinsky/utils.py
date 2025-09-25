@@ -26,6 +26,7 @@ def get_T2V_pipeline(
     text_encoder2_path: str = None,
     vae_path: str = None,
     conf_path: str = None,
+    low_mem_usage: bool = False,
 ) -> Kandinsky5T2VPipeline:
     assert resolution in [512]
 
@@ -86,11 +87,9 @@ def get_T2V_pipeline(
     else:
         conf = OmegaConf.load(conf_path)
 
-    text_embedder = get_text_embedder(conf.model.text_embedder).to(
-        device=device_map["text_embedder"]
-    )
+    text_embedder = get_text_embedder(conf.model.text_embedder)
     vae = build_vae(conf.model.vae)
-    vae = vae.eval().to(device=device_map["vae"])
+    vae = vae.eval()
 
     dit = get_dit(conf.model.dit_params)
     state_dict = load_file(conf.model.checkpoint_path)
@@ -106,8 +105,7 @@ def get_T2V_pipeline(
         new_state_dict[new_key] = state_dict[key]
     del state_dict
 
-    dit.load_state_dict(new_state_dict)
-    dit = dit.to(device_map["dit"])
+    dit.load_state_dict(new_state_dict, assign=True)
 
     if world_size > 1:
         dit = parallelize_dit(dit, device_mesh["tensor_parallel"])
@@ -121,6 +119,7 @@ def get_T2V_pipeline(
         local_dit_rank=local_rank,
         world_size=world_size,
         conf=conf,
+        low_mem_usage=low_mem_usage, 
     )
 
 

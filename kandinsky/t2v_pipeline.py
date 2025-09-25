@@ -4,7 +4,7 @@ import torch
 import torchvision
 from torchvision.transforms import ToPILImage
 
-from .generation_utils import generate_sample
+from .generation_utils import generate_sample, generate_sample_lowmem
 
 
 class Kandinsky5T2VPipeline:
@@ -20,6 +20,7 @@ class Kandinsky5T2VPipeline:
         local_dit_rank=0,
         world_size=1,
         conf=None,
+        low_mem_usage=False,
     ):
         if resolution not in [512]:
             raise ValueError("Resolution can be only 512")
@@ -28,12 +29,22 @@ class Kandinsky5T2VPipeline:
         self.text_embedder = text_embedder
         self.vae = vae
 
-        self.resolution = resolution
+        if not low_mem_usage:
+            self.text_embedder = self.text_embedder.to(
+                device=device_map["text_embedder"])
+            self.vae = self.vae.to(device=device_map["vae"])
+            self.dit = self.dit.to(device_map["dit"])
+            self.gen_script = generate_sample
 
+        else:
+            self.gen_script = generate_sample_lowmem
+
+        self.resolution = resolution
         self.device_map = device_map
         self.local_dit_rank = local_dit_rank
         self.world_size = world_size
         self.conf = conf
+        self.low_mem_usage = low_mem_usage
 
         self.RESOLUTIONS = {
             512: [(512, 512), (512, 768), (768, 512)],
@@ -57,6 +68,11 @@ class Kandinsky5T2VPipeline:
                 ],
             }
         ]
+
+        if self.low_mem_usage:
+            self.text_embedder = self.text_embedder.to(
+                device=self.device_map["text_embedder"])
+
         text = self.text_embedder.embedder.processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -134,7 +150,7 @@ class Kandinsky5T2VPipeline:
         shape = (bs, num_frames, height // 8, width // 8, 16)
 
         # GENERATION
-        images = generate_sample(
+        images = self.gen_script(
             shape,
             captions,
             self.dit,
