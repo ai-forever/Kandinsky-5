@@ -54,7 +54,7 @@ def parallelize_dit(model, tp_mesh):
                 "self_attention.key_norm": SequenceParallel(
                     sequence_dim=0, use_local_output=True
                 ),
-                "self_attention.out_layer": RowwiseParallel(
+                "out_layer_self": RowwiseParallel(
                     output_layouts=Replicate(),
                 ),
                 "cross_attention_norm": SequenceParallel(
@@ -75,7 +75,7 @@ def parallelize_dit(model, tp_mesh):
                 "cross_attention.key_norm": SequenceParallel(
                     sequence_dim=0, use_local_output=True
                 ),
-                "cross_attention.out_layer": RowwiseParallel(
+                "out_layer_cross": RowwiseParallel(
                     output_layouts=Replicate(),
                 ),
                 "feed_forward_norm": SequenceParallel(

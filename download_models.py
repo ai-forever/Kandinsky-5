@@ -1,15 +1,15 @@
 from huggingface_hub import hf_hub_download, snapshot_download
-import 
+import os
 
 if __name__ == "__main__":
 
     cache_dir = "./weights"
     
-    # dit_path = snapshot_download(
-    #     repo_id="", # TODO add hf repo
-    #     allow_patterns="model/*",
-    #     local_dir=cache_dir,
-    # )
+    dit_path = snapshot_download(
+        repo_id="ai-forever/kandinsky-5",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
     
     vae_path = snapshot_download(
         repo_id="hunyuanvideo-community/HunyuanVideo",
