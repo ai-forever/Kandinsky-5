@@ -5,7 +5,7 @@
 
 ## Description
 
-This project provides a workflow for generating images using the Kandinsky 5 model within the ComfyUI environment.
+This project provides a workflow for generating videos using the Kandinsky 5 model within the ComfyUI environment.
 
 ## Installation and Setup
 
