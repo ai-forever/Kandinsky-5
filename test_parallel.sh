@@ -1,0 +1,1 @@
+python -m torch.distributed.launch --nnodes 1 --nproc-per-node 4 test.py 
