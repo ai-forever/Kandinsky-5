@@ -26,6 +26,7 @@ def get_T2V_pipeline(
     text_encoder2_path: str = None,
     vae_path: str = None,
     conf_path: str = None,
+    offload: bool = False,
 ) -> Kandinsky5T2VPipeline:
     assert resolution in [512]
 
@@ -38,6 +39,8 @@ def get_T2V_pipeline(
         )
     except:
         local_rank, world_size = 0, 1
+
+    assert not (world_size > 1 and offload), "Offloading available only with not parallel inference"
 
     if world_size > 1:
         device_mesh = init_device_mesh(
@@ -86,18 +89,22 @@ def get_T2V_pipeline(
     else:
         conf = OmegaConf.load(conf_path)
 
-    text_embedder = get_text_embedder(conf.model.text_embedder).to(
-        device=device_map["text_embedder"]
-    )
+    text_embedder = get_text_embedder(conf.model.text_embedder)
+    if not offload: 
+        text_embedder = text_embedder.to( device=device_map["text_embedder"]) 
+    
     vae = build_vae(conf.model.vae)
-    vae = vae.eval().to(device=device_map["vae"])
+    vae = vae.eval()
+    if not offload:
+        vae = vae.to(device=device_map["vae"]) 
 
     dit = get_dit(conf.model.dit_params)
     state_dict = load_file(conf.model.checkpoint_path)
 
 
     dit.load_state_dict(state_dict)
-    dit = dit.to(device_map["dit"])
+    if not offload:
+        dit = dit.to(device_map["dit"])
 
     if world_size > 1:
         dit = parallelize_dit(dit, device_mesh["tensor_parallel"])
@@ -111,6 +118,7 @@ def get_T2V_pipeline(
         local_dit_rank=local_rank,
         world_size=world_size,
         conf=conf,
+        offload=offload,
     )
 
 

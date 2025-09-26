@@ -143,7 +143,9 @@ def generate_sample(
     seed=6554,
     device="cuda",
     vae_device="cuda",
+    text_embedder_device="cuda",
     progress=True,
+    offload=False,
 ):
     bs, duration, height, width, dim = shape
     if duration == 1:
@@ -151,6 +153,10 @@ def generate_sample(
     else:
         type_of_content = "video"
 
+
+    if offload:
+        text_embedder = text_embedder.to(text_embedder_device)
+        
     with torch.no_grad():
         bs_text_embed, text_cu_seqlens = text_embedder.encode(
             [caption], type_of_content=type_of_content
@@ -159,6 +165,9 @@ def generate_sample(
             [negative_caption], type_of_content=type_of_content
         )
 
+    if offload:
+        text_embedder = text_embedder.to('cpu')
+        
     for key in bs_text_embed:
         bs_text_embed[key] = bs_text_embed[key].to(device=device)
         bs_null_text_embed[key] = bs_null_text_embed[key].to(device=device)
@@ -173,6 +182,9 @@ def generate_sample(
     text_rope_pos = torch.arange(text_cu_seqlens)
     null_text_rope_pos = torch.arange(null_text_cu_seqlens)
 
+    if offload:
+        dit.to(device, non_blocking=True)
+        
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             latent_visual = generate(
@@ -191,7 +203,13 @@ def generate_sample(
                 seed=seed,
                 progress=progress,
             )
+            
+    if offload:
+        dit = dit.to('cpu', non_blocking=True)
     torch.cuda.empty_cache()
+
+    if offload:
+        vae = vae.to(vae_device, non_blocking=True)
 
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
@@ -206,6 +224,9 @@ def generate_sample(
             images = (images / vae.config.scaling_factor).permute(0, 4, 1, 2, 3)
             images = vae.decode(images).sample
             images = ((images.clamp(-1.0, 1.0) + 1.0) * 127.5).to(torch.uint8)
+
+    if offload:
+        vae = vae.to('cpu', non_blocking=True)
     torch.cuda.empty_cache()
 
     return images

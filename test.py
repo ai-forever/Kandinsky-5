@@ -89,6 +89,13 @@ def parse_args():
         default=None,
         help="Name of the resulting file"
     )
+
+    parser.add_argument(
+        "--offload",
+        type=bool,
+        default=False,
+        help="Offload models to save memory or not"
+    )
     args = parser.parse_args()
     return args
 
@@ -100,7 +107,8 @@ if __name__ == "__main__":
     pipe = get_T2V_pipeline(
         device_map={"dit": "cuda:0", "vae": "cuda:0",
                     "text_embedder": "cuda:0"},
-        conf_path=args.config
+        conf_path=args.config,
+        offload=args.offload,
     )
 
     if args.output_filename is None:

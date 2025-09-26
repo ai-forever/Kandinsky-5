@@ -17,9 +17,10 @@ class Kandinsky5T2VPipeline:
         text_embedder,
         vae,
         resolution: int = 512,
-        local_dit_rank=0,
-        world_size=1,
-        conf=None,
+        local_dit_rank: int = 0,
+        world_size: int = 1,
+        conf = None,
+        offload: bool = False,
     ):
         if resolution not in [512]:
             raise ValueError("Resolution can be only 512")
@@ -36,6 +37,8 @@ class Kandinsky5T2VPipeline:
         self.conf = conf
         self.num_steps = conf.model.num_steps
         self.guidance_weight = conf.model.guidance_weight
+
+        self.offload = offload
 
         self.RESOLUTIONS = {
             512: [(512, 512), (512, 768), (768, 512)],
@@ -127,7 +130,11 @@ class Kandinsky5T2VPipeline:
         caption = text
         if expand_prompts:
             if self.local_dit_rank == 0:
+                if self.offload:
+                    self.text_embedder = self.text_embedder.to(self.device_map["text_embedder"])
                 caption = self.expand_prompt(caption)
+                if self.offload:
+                    self.text_embedder = self.text_embedder.to("cpu")
             if self.world_size > 1:
                 caption = [caption]
                 torch.distributed.broadcast_object_list(caption, 0)
@@ -150,7 +157,9 @@ class Kandinsky5T2VPipeline:
             seed=seed,
             device=self.device_map["dit"],
             vae_device=self.device_map["vae"],
-            progress=progress
+            text_embedder_device=self.device_map["text_embedder"],
+            progress=progress,
+            offload=self.offload
         )
         torch.cuda.empty_cache()
 
