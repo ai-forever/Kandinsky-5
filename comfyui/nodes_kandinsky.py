@@ -9,9 +9,11 @@ import folder_paths
 from comfy.comfy_types import ComfyNodeABC
 from comfy.utils import ProgressBar as pbar
 from safetensors.torch import load_file
+from omegaconf import OmegaConf
+from pathlib import Path
 
 
-class loadTextEmbeddersKandy:
+class Kandinsky5LoadTextEmbedders:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -35,7 +37,7 @@ class loadTextEmbeddersKandy:
             'clip': {'checkpoint_path': clip_path, 'max_length': 77}
         }
         return (Kandinsky5TextEmbedder(DictConfig(conf), device=device),)
-class loadDiTKandy:
+class Kandinsky5LoadDiT:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -43,8 +45,8 @@ class loadDiTKandy:
                 "dit": (folder_paths.get_filename_list("diffusion_models"), ),
             }
         }
-    RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
+    RETURN_TYPES = ("MODEL","CONFIG")
+    RETURN_NAMES = ("model","conf")
     FUNCTION = "load_dit"
     CATEGORY = "advanced/loaders"
 
@@ -53,26 +55,26 @@ class loadDiTKandy:
     def load_dit(self, dit, device="cuda:0"):
         
         dit_path = folder_paths.get_full_path_or_raise("diffusion_models", dit)
-        dit_params = DictConfig({
-        "in_visual_dim": 16,
-        "out_visual_dim": 16,
-        "time_dim": 512,
-        "patch_size": [1, 2, 2],
-        "model_dim": 1792,
-        "ff_dim": 7168,
-        "num_text_blocks": 2,
-        "num_visual_blocks": 32,
-        "axes_dims": [16, 24, 24],
-        "visual_cond": True,
-        "in_text_dim": 3584,
-        "in_text_dim2": 768,
-        })
-        dit = get_dit(dit_params)
+        current_file = Path(__file__)
+        parent_directory = current_file.parent.parent
+        sec = dit.split("_")[-1].split(".")[0]
+        conf = OmegaConf.load(os.path.join(parent_directory,f"configs/config_{sec}_sft.yaml"))
+        dit = get_dit(conf.model.dit_params)
         dit = dit.to(device=device)
         state_dict = load_file(dit_path)
-        dit.load_state_dict(state_dict)
-        return (dit,)
-class KandyTextEncode(ComfyNodeABC):
+        new_state_dict = {}
+        for key in state_dict:
+            new_key = key
+            if 'out_layer' in key:
+                if 'cross_attention' in key:
+                    new_key = key.replace('cross_attention.out_layer', 'out_layer_cross')
+                elif 'self_attention' in key:
+                    new_key = key.replace('self_attention.out_layer', 'out_layer_self')
+            new_state_dict[new_key] = state_dict[key]
+        del state_dict
+        dit.load_state_dict(new_state_dict)
+        return (dit,conf)
+class Kandinsky5TextEncode(ComfyNodeABC):
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -98,7 +100,7 @@ class KandyTextEncode(ComfyNodeABC):
         pooled_embed = model.clip_embedder([text])
         return (text_embeds, pooled_embed)
 
-class loadVAEKandy:
+class Kandinsky5LoadVAE:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -180,19 +182,19 @@ class expand_prompt(ComfyNodeABC):
         )
         print(output_text[0])
         return (output_text[0],str(output_text[0]))
-class KandyGenerate(ComfyNodeABC):
+class Kandinsky5Generate(ComfyNodeABC):
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
                 "model": ("MODEL", {"tooltip": "The model used for denoising the input latent."}),
+                "config": ("CONFIG", {"tooltip": "Config of model and generation."}),
                 "steps": ("INT", {"default": 50, "min": 1, "max": 10000, "tooltip": "The number of steps used in the denoising process."}),
                 "width": ("INT", {"default": 768, "min": 512, "max": 768, "tooltip": "width of video."}),
                 "height": ("INT", {"default": 512, "min": 512, "max": 768, "tooltip": "height of video."}),
-                "lenght": ("INT", {"default": 31, "min": 5, "max": 121, "tooltip": "lenght of video."}),
+                "length": ("INT", {"default": 121, "min": 5, "max": 241, "tooltip": "lenght of video."}),
                 "cfg": ("FLOAT", {"default": 5.0, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01, "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt. Higher values result in images more closely matching the prompt however too high values will negatively impact quality."}),
-                "scheduler_scale":("FLOAT", {"default": 5.0, "min": 1.0, "max": 10.0, "step":0.1, "round": 0.01, "tooltip": "scheduler scale"}),
-                "attention_type":(["full", "sparse"],),
+                "scheduler_scale":("FLOAT", {"default": 10.0, "min": 1.0, "max": 25.0, "step":0.1, "round": 0.01, "tooltip": "scheduler scale"}),
                 "positive_emb": ("CONDITION", {"tooltip": "The conditioning describing the attributes you want to include in the image."}),
                 "positive_clip": ("CONDITION", {"tooltip": "The conditioning describing the attributes you want to exclude from the image."}),
                 "negative_emb": ("CONDITION", {"tooltip": "The conditioning describing the attributes you want to include in the image."}),
@@ -206,62 +208,36 @@ class KandyGenerate(ComfyNodeABC):
     CATEGORY = "sampling"
     DESCRIPTION = "Uses the provided model, positive and negative conditioning to denoise the latent image."
 
-    def sample(self, model, steps, width, height, lenght, cfg, positive_emb, positive_clip, negative_emb, negative_clip, scheduler_scale, attention_type):
+    def sample(self, model, config, steps, width, height, length, cfg, positive_emb, positive_clip, negative_emb, negative_clip, scheduler_scale):
         bs = 1
         device = 'cuda:0'
         patch_size = (1, 2, 2)
-        dim = 16
-        height, width = height // 8, width // 8
+        dim = config.model.dit_params.in_visual_dim
+        length, height, width = 1 + (length - 1)//4, height // 8, width // 8
         bs_text_embed, text_cu_seqlens = positive_emb
         bs_null_text_embed, null_text_cu_seqlens = negative_emb
-        progress_bar = pbar(steps)
         text_embed = {"text_embeds": bs_text_embed, "pooled_embed": positive_clip }
         null_embed = {"text_embeds": bs_null_text_embed, "pooled_embed": negative_clip }
 
-        visual_cu_seqlens = lenght * torch.arange(bs + 1, dtype=torch.int32, device=device)
+        visual_cu_seqlens = length * torch.arange(bs + 1, dtype=torch.int32, device=device)
         visual_rope_pos = [
             torch.cat([torch.arange(end) for end in torch.diff(visual_cu_seqlens).cpu()]),
             torch.arange(height // patch_size[1]), torch.arange(width // patch_size[2])
         ]
         text_rope_pos = torch.cat([torch.arange(end) for end in torch.diff(text_cu_seqlens).cpu()])
         null_text_rope_pos = torch.cat([torch.arange(end) for end in torch.diff(null_text_cu_seqlens).cpu()])
-        attention = {
-            "type": "flash" if attention_type=='full' else "nabla",
-            "causal": False,
-            "local": False,
-            "glob": False,
-            "window": 3,
-            "P":0.9,
-            "wT":11,
-            "wW":3,
-            "wH":3,
-            "add_sta":True,
-            "method": "topcdf"
-            }
-        dit_params = {
-            "patch_size": [1, 2, 2],
-            }
-        conf = {
-            "model": {
-                "dit_params": dit_params,
-                "attention": attention,
-            },
-            "metrics": {"scale_factor": (1, 2, 2)},
-        }
-        conf = DictConfig(conf)
-        print(conf)
         with torch.no_grad():
             with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
                 latent_visual = generate(
-                    model, device, (bs * lenght, height, width, dim), steps, 
+                    model, device, (bs * length, height, width, dim), steps, 
                     text_embed, null_embed, 
                     visual_cu_seqlens, text_cu_seqlens, null_text_cu_seqlens,
                     visual_rope_pos, text_rope_pos, null_text_rope_pos,
-                    cfg, scheduler_scale, conf 
+                    cfg, scheduler_scale, config 
                 )
         return (latent_visual,)
 
-class KandyVAEDecode(ComfyNodeABC):
+class Kandinsky5VAEDecode(ComfyNodeABC):
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -290,21 +266,21 @@ class KandyVAEDecode(ComfyNodeABC):
         return (images,)
 
 NODE_CLASS_MAPPINGS = {
-    "loadTextEmbeddersKandy": loadTextEmbeddersKandy,
-    "KandyTextEncode": KandyTextEncode,
-    "KandyGenerate": KandyGenerate,
-    "loadVAEKandy": loadVAEKandy,
-    "KandyVAEDecode": KandyVAEDecode,
-    "loadDiTKandy": loadDiTKandy,
+    "Kandinsky5LoadTextEmbedders": Kandinsky5LoadTextEmbedders,
+    "Kandinsky5TextEncode": Kandinsky5TextEncode,
+    "Kandinsky5Generate": Kandinsky5Generate,
+    "Kandinsky5LoadVAE": Kandinsky5LoadVAE,
+    "Kandinsky5VAEDecode": Kandinsky5VAEDecode,
+    "Kandinsky5LoadDiT": Kandinsky5LoadDiT,
     "expand_prompt": expand_prompt
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "loadTextEmbeddersKandy": "loadTextEmbeddersKandy",
-    "KandyTextEncode": "KandyTextEncode",
-    "KandyGenerate": "KandyGenerate",
-    "loadVAEKandy": "loadVAEKandy",
-    "KandyVAEDecode": "KandyVAEDecode",
-    "loadDiTKandy": "loadDiTKandy",
+    "Kandinsky5LoadTextEmbedders": "Kandinsky5LoadTextEmbedders",
+    "Kandinsky5TextEncode": "Kandinsky5TextEncode",
+    "Kandinsky5Generate": "Kandinsky5Generate",
+    "Kandinsky5LoadVAE": "Kandinsky5LoadVAE",
+    "Kandinsky5VAEDecode": "Kandinsky5VAEDecode",
+    "Kandinsky5LoadDiT": "Kandinsky5LoadDiT",
     "expand_prompt": "expand_prompt"
 
 }

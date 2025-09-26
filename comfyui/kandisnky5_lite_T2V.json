@@ -1,0 +1,591 @@
+{
+  "last_node_id": 77,
+  "last_link_id": 162,
+  "nodes": [
+    {
+      "id": 70,
+      "type": "ShowText",
+      "pos": [
+        -835.82275390625,
+        471.0197448730469
+      ],
+      "size": [
+        391.5,
+        237.22247314453125
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 133
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "shape": 6,
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-show-text",
+        "ver": "b5e6f55fc69516f2c20553b516e9ace8ff7d8987",
+        "Node name for S&R": "ShowText",
+        "aux_id": "fairy-root/ComfyUI-Show-Text"
+      },
+      "widgets_values": [
+        "",
+        "In a gripping and cinematic sequence, a heavily armored military tank, its steel-gray hull adorned with bold white lettering reading \"SBER,\" charges forward with a powerful and dramatic impact. The tank's imposing presence is accentuated by its robust design and the authoritative stance it projects as it moves towards its target.\n\nThe tank approaches a sleek, modern office building, distinguished by a glowing neon sign that reads \"OpenAI\" in vibrant blue and green hues, symbolizing innovation and cutting-edge technology. As the tank nears the building, the tension builds, and the anticipation reaches a peak.\n\nWith a thunderous crash, the tank smashes through a reinforced glass wall, sending shards of glass and debris flying into the air. The impact is so forceful that it sends shockwaves through the surrounding area, creating a chaotic and visually striking scene. The camera captures this moment from multiple angles, emphasizing the sheer power and destructive force of the tank.\n\nInside the building, the artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. Debris and shattered glass litter the floor, and the sound of metal crunching and glass breaking echoes through the space. The camera follows the tank's movement, highlighting the chaos and disarray it leaves behind"
+      ]
+    },
+    {
+      "id": 68,
+      "type": "expand_prompt",
+      "pos": [
+        -284.2915954589844,
+        -115.96104431152344
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 139
+        }
+      ],
+      "outputs": [
+        {
+          "name": "exp_prompt",
+          "type": "PROMPT",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "log",
+          "type": "STRING",
+          "links": [
+            133
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
+        "Node name for S&R": "expand_prompt"
+      },
+      "widgets_values": [
+        "A heavily armored military tank, with bold white lettering reading \"SBER\" painted on its steel-gray hull, charges forward with a powerful and dramatic impact. It approaches a sleek, modern office building featuring a glowing neon sign that reads \"OpenAI\" in bright blue and green hues. The tank smashes through a reinforced glass wall with a thunderous crash, sending shards of glass and debris flying. Inside the building, artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. The camera follows the action with dynamic, fast-paced shots, capturing the force of the impact and the chaos unfolding. The visual style is intense and cinematic, with dramatic lighting contrasts and a high-impact, high-stakes atmosphere, emphasizing the collision between two powerful entities.'"
+      ]
+    },
+    {
+      "id": 71,
+      "type": "Kandinsky5LoadTextEmbedders",
+      "pos": [
+        -914.0863647460938,
+        -140.99302673339844
+      ],
+      "size": [
+        340.20001220703125,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            138,
+            139,
+            143,
+            147
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5LoadTextEmbedders"
+      },
+      "widgets_values": [
+        "qwen2_5_vl_7b_instruct",
+        "clip_text"
+      ]
+    },
+    {
+      "id": 73,
+      "type": "Kandinsky5TextEncode",
+      "pos": [
+        39.00349426269531,
+        790.864501953125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 147
+        },
+        {
+          "name": "extended_text",
+          "type": "PROMPT",
+          "shape": 7,
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "links": [
+            159
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "links": [
+            158
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5TextEncode"
+      },
+      "widgets_values": [
+        "bad, static"
+      ]
+    },
+    {
+      "id": 72,
+      "type": "Kandinsky5TextEncode",
+      "pos": [
+        -94.78922271728516,
+        288.76806640625
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 143
+        },
+        {
+          "name": "extended_text",
+          "type": "PROMPT",
+          "shape": 7,
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "links": [
+            161
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "links": [
+            160
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5TextEncode"
+      },
+      "widgets_values": [
+        "A heavily armored military tank, with bold white lettering reading \"SBER\" painted on its steel-gray hull, charges forward with a powerful and dramatic impact. It approaches a sleek, modern office building featuring a glowing neon sign that reads \"OpenAI\" in bright blue and green hues. The tank smashes through a reinforced glass wall with a thunderous crash, sending shards of glass and debris flying. Inside the building, artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. The camera follows the action with dynamic, fast-paced shots, capturing the force of the impact and the chaos unfolding. The visual style is intense and cinematic, with dramatic lighting contrasts and a high-impact, high-stakes atmosphere, emphasizing the collision between two powerful entities.'"
+      ]
+    },
+    {
+      "id": 76,
+      "type": "Kandinsky5LoadVAE",
+      "pos": [
+        570.6658325195312,
+        -181.69422912597656
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            155
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5LoadVAE"
+      },
+      "widgets_values": [
+        "hunyuan_vae"
+      ]
+    },
+    {
+      "id": 77,
+      "type": "Kandinsky5VAEDecode",
+      "pos": [
+        1128.1783447265625,
+        -202.5648651123047
+      ],
+      "size": [
+        239.40000915527344,
+        46
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 155
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 156
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            157
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 54,
+      "type": "SaveAnimatedWEBP",
+      "pos": [
+        1580.81591796875,
+        -201.1278076171875
+      ],
+      "size": [
+        616.9959716796875,
+        569.41552734375
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 157
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.26"
+      },
+      "widgets_values": [
+        "ComfyUI",
+        24,
+        false,
+        100,
+        "default",
+        ""
+      ]
+    },
+    {
+      "id": 75,
+      "type": "Kandinsky5Generate",
+      "pos": [
+        645.9276733398438,
+        330.11688232421875
+      ],
+      "size": [
+        315,
+        282
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 149
+        },
+        {
+          "name": "config",
+          "type": "CONFIG",
+          "link": 162
+        },
+        {
+          "name": "positive_emb",
+          "type": "CONDITION",
+          "link": 161
+        },
+        {
+          "name": "positive_clip",
+          "type": "CONDITION",
+          "link": 160
+        },
+        {
+          "name": "negative_emb",
+          "type": "CONDITION",
+          "link": 159
+        },
+        {
+          "name": "negative_clip",
+          "type": "CONDITION",
+          "link": 158
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            156
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5Generate"
+      },
+      "widgets_values": [
+        50,
+        768,
+        512,
+        121,
+        5,
+        5
+      ]
+    },
+    {
+      "id": 74,
+      "type": "Kandinsky5LoadDiT",
+      "pos": [
+        284.0606994628906,
+        -49.29227828979492
+      ],
+      "size": [
+        315,
+        78
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            149
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "conf",
+          "type": "CONFIG",
+          "links": [
+            162
+          ],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
+        "Node name for S&R": "Kandinsky5LoadDiT"
+      },
+      "widgets_values": [
+        "lite_sft_5s.safetensors"
+      ]
+    }
+  ],
+  "links": [
+    [
+      133,
+      68,
+      1,
+      70,
+      0,
+      "STRING"
+    ],
+    [
+      138,
+      71,
+      0,
+      64,
+      0,
+      "MODEL"
+    ],
+    [
+      139,
+      71,
+      0,
+      68,
+      0,
+      "MODEL"
+    ],
+    [
+      143,
+      71,
+      0,
+      72,
+      0,
+      "MODEL"
+    ],
+    [
+      147,
+      71,
+      0,
+      73,
+      0,
+      "MODEL"
+    ],
+    [
+      149,
+      74,
+      0,
+      75,
+      0,
+      "MODEL"
+    ],
+    [
+      155,
+      76,
+      0,
+      77,
+      0,
+      "MODEL"
+    ],
+    [
+      156,
+      75,
+      0,
+      77,
+      1,
+      "LATENT"
+    ],
+    [
+      157,
+      77,
+      0,
+      54,
+      0,
+      "IMAGE"
+    ],
+    [
+      158,
+      73,
+      1,
+      75,
+      5,
+      "CONDITION"
+    ],
+    [
+      159,
+      73,
+      0,
+      75,
+      4,
+      "CONDITION"
+    ],
+    [
+      160,
+      72,
+      1,
+      75,
+      3,
+      "CONDITION"
+    ],
+    [
+      161,
+      72,
+      0,
+      75,
+      2,
+      "CONDITION"
+    ],
+    [
+      162,
+      74,
+      1,
+      75,
+      1,
+      "CONFIG"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8000000000000032,
+      "offset": [
+        200.09457878665054,
+        -32.749839444394134
+      ]
+    }
+  },
+  "version": 0.4
+}
