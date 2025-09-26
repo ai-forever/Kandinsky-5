@@ -29,6 +29,10 @@ In this repository, we provide a family of diffusion models to generate a video 
 
 ## Kandinsky 5.0 T2V Lite
 
+
+https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
+
+
 Kandinsky 5.0 T2V Lite — top 1 video generation model among open source in its class (small and lightweight model with 2B parameters, better than the Wan 5B, 14B), top 1 in knowledge of Russian concepts in open source.
 
 ### Reesults: 
