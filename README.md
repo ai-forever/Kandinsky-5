@@ -160,11 +160,10 @@ python test.py --width 768 --height 512 --prompt "A dog in red hat"
 ```
 
 # Authors
-TODO: check authors list
-<B>Project Leader:</B> Denis Dimitrov. </br>
-<B>Scientific Advisors:</B> Andrey Kuznetsov, Sergey Markov.</br>
-<B>Training Pipeline & Model Pretrain & Model Distillation:</B> Vladimir Arkhipkin, Lev Novitskiy, Maria Kovaleva. </br>
-<B>Model Architecture:</B> Vladimir Arkhipkin, Maria Kovaleva, Arsen Kuzhamuratov, Nikolay Gerasimenko, Mikhail Zhirnov, Alexander Gambashidze, Konstantin Sobolev.</br>
-<B>Data Pipeline:</B> Ivan Kirillov, Andrei Shutkin, Kirill Chernishev, Julia Agafonova, Elizaveta Dakhova, Denis Parkhomenko.</br>
-<B>Quality Assessment:</B> Nikolay Gerasimenko, Anna Averchenkova, Victor Panshin, Vladislav Veselov, Pavel Perminov, Vladislav Rodionov, Sergey Skachkov, Stepan Ponomarev.</br>
-<B>Other Contributors:</B> Viacheslav Vasilev, Andrei Filatov, Gregory Leleytner.</br>
+<B>Project Leader:</B> Denis Dimitrov</br>
+
+<B>Team Leads:</B> Vladimir Arkhipkin, Vladimir Korviakov, Nikolai Gerasimenko, Denis Parkhomenko</br>
+
+<B>Core Contributors:</B> Alexey Letunovskiy, Maria Kovaleva, Ivan Kirillov, Lev Novickiy, Denis Koposov, Dmitry Mikhaylov, Anna Averchenkova, Andrey Shutkin, Julia Agafonova, Olga Kim, Anastasiia Kargapoltseva, Nikita Kiselev</br>
+
+<B>Contributors:</B> Anna Dmitrienko,  Anastasia Maltseva, Kirill Chernyshev, Ilia Vasiliev, Vladimir Polovnikov, Viacheslav Vasiliev, Yury Kolabushin, Alexander Belykh, Mikhail Mamaev, Anastasia Aliaskina, Tatiana Nikulina, Polina Gavrilova</br>
