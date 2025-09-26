@@ -10,13 +10,13 @@
   <a href="">Article</a> | <a href=>Project Page</a> |Technical Report (soon) | <a href=> Models🤗 (soon) </a>
 </div>
 
-<h1>Kandinsky 5.0: A family of diffusion models for Video generation</h1>
+<h1>Kandinsky 5.0 Video Lite: A family of diffusion models for Video generation</h1>
 
 In this repository, we provide a family of diffusion models to generate a video given a textual prompt or an image (<em>Coming Soon</em>) and distilled model for a faster generation.
 
 ## Project Updates
 
-- 🔥 **Source**: ```2025/08/XX```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 T2V` text-to-video generation model. Released checkpoints: `flash_5s_pretrain`, `nabla_10s_pretrain`, `flash_5s_sft`, `nabla_10s_sft`, `flash_5s_distil` (flash_... checkpoints are the the base model checkpoints, nabla_... is the faster model checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm)
+- 🔥 **Source**: ```2025/09/29```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 Video` text-to-video generation model. Released checkpoints: `lite_pretrain_5s`, `lite_pretrain_10s`, `lite_sft_5s`, `lite_sft_10s`, `lite_nocfg_5s`, `lite_nocfg_10s`, `lite_distil_5s`, `lite_distil_10s` contains weight from pretrain, supervised finetuning, cfg distillation and distillation in 16 steps. 5s checkpoints are capable of generating videos up to 5 seconds long. 10s checkpoints is faster models checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm and capable to generate videos up to 10 seconds long.
 
 ## Table of contents
 <ul>
@@ -29,6 +29,9 @@ In this repository, we provide a family of diffusion models to generate a video 
 
 ## Kandinsky 5.0 T2V Lite
 
+Kandinsky 5.0 T2V Lite — top 1 video generation model among open source in its class (small and lightweight model with 2B parameters, better than the Wan 5B, 14B), top 1 in knowledge of Russian concepts in open source.
+
+https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 
 
 ### Reesults: 
@@ -37,7 +40,7 @@ TODO: add SBS
 ### Examples:
 
 <table border="0" style="width: 200; text-align: left; margin-top: 20px;">
-  <tr>
+  <!-- <tr>
       <td>
           <video src="https://github.com/user-attachments/assets/d5a0c11e-020b-4e56-9a17-5b3995890908" width=200 controls autoplay loop></video>
       </td>
@@ -58,7 +61,7 @@ TODO: add SBS
       <td>
           <video src="https://github.com/user-attachments/assets/4eb10e1d-60a0-4ff9-ad7e-9b5ab0a0fff8" width=200 controls autoplay loop></video>
       </td>
-  </tr>
+  </tr> -->
 
 </table>
 
@@ -100,7 +103,7 @@ Please, refer to [inference_example.ipynb](inference_example.ipynb) notebook for
 For a faster inference, we also provide the capability to perform inference in a distributed way:
 ```
 NUMBER_OF_NODES=1
-NUMBER_OF_DEVICES_PER_NODE=8
+NUMBER_OF_DEVICES_PER_NODE=2 or 4
 python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $NUMBER_OF_DEVICES_PER_NODE test.py
 ```
 
@@ -111,8 +114,9 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
       - [x]  pretrain
       - [x] sft
       - [ ] rl
-      - [x] distil
-    - [x] ComfyUI integration
+      - [ ] cfg distil 
+      - [x] distil 16 steps
+    - [ ] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Lite Image-to-Video
     - [ ] Multi-GPU Inference code of the 2B model
@@ -156,11 +160,10 @@ python test.py --width 768 --height 512 --prompt "A dog in red hat"
 ```
 
 # Authors
-TODO: check authors list
-<B>Project Leader:</B> Denis Dimitrov. </br>
-<B>Scientific Advisors:</B> Andrey Kuznetsov, Sergey Markov.</br>
-<B>Training Pipeline & Model Pretrain & Model Distillation:</B> Vladimir Arkhipkin, Lev Novitskiy, Maria Kovaleva. </br>
-<B>Model Architecture:</B> Vladimir Arkhipkin, Maria Kovaleva, Arsen Kuzhamuratov, Nikolay Gerasimenko, Mikhail Zhirnov, Alexander Gambashidze, Konstantin Sobolev.</br>
-<B>Data Pipeline:</B> Ivan Kirillov, Andrei Shutkin, Kirill Chernishev, Julia Agafonova, Elizaveta Dakhova, Denis Parkhomenko.</br>
-<B>Quality Assessment:</B> Nikolay Gerasimenko, Anna Averchenkova, Victor Panshin, Vladislav Veselov, Pavel Perminov, Vladislav Rodionov, Sergey Skachkov, Stepan Ponomarev.</br>
-<B>Other Contributors:</B> Viacheslav Vasilev, Gregory Leleytner.</br>
+<B>Project Leader:</B> Denis Dimitrov</br>
+
+<B>Team Leads:</B> Vladimir Arkhipkin, Vladimir Korviakov, Nikolai Gerasimenko, Denis Parkhomenko</br>
+
+<B>Core Contributors:</B> Alexey Letunovskiy, Maria Kovaleva, Ivan Kirillov, Lev Novitskiy, Denis Koposov, Dmitrii Mikhailov, Anna Averchenkova, Andrey Shutkin, Julia Agafonova, Olga Kim, Anastasiia Kargapoltseva, Nikita Kiselev</br>
+
+<B>Contributors:</B> Anna Dmitrienko,  Anastasia Maltseva, Kirill Chernyshev, Ilia Vasiliev, Vladimir Polovnikov, Viacheslav Vasiliev, Yury Kolabushin, Alexander Belykh, Mikhail Mamaev, Anastasia Aliaskina, Tatiana Nikulina, Polina Gavrilova</br>
