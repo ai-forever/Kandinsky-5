@@ -5,7 +5,6 @@ import torch
 from tqdm import tqdm 
 
 from .models.utils import fast_sta_nabla
-from .memory_logger import MemoryLogger
 
 
 def get_sparse_params(conf, batch_embeds, device):
@@ -51,31 +50,30 @@ def get_velocity(
     conf,
     sparse_params=None,
 ):
-    with torch.profiler.record_function("DiT"):
-        pred_velocity = dit(
+    pred_velocity = dit(
+        x,
+        text_embeds["text_embeds"],
+        text_embeds["pooled_embed"],
+        t * 1000,
+        visual_rope_pos,
+        text_rope_pos,
+        scale_factor=conf.metrics.scale_factor,
+        sparse_params=sparse_params,
+    )
+    if abs(guidance_weight - 1.0) > 1e-6:
+        uncond_pred_velocity = dit(
             x,
-            text_embeds["text_embeds"],
-            text_embeds["pooled_embed"],
+            null_text_embeds["text_embeds"],
+            null_text_embeds["pooled_embed"],
             t * 1000,
             visual_rope_pos,
-            text_rope_pos,
+            null_text_rope_pos,
             scale_factor=conf.metrics.scale_factor,
             sparse_params=sparse_params,
         )
-        if abs(guidance_weight - 1.0) > 1e-6:
-            uncond_pred_velocity = dit(
-                x,
-                null_text_embeds["text_embeds"],
-                null_text_embeds["pooled_embed"],
-                t * 1000,
-                visual_rope_pos,
-                null_text_rope_pos,
-                scale_factor=conf.metrics.scale_factor,
-                sparse_params=sparse_params,
-            )
-            pred_velocity = uncond_pred_velocity + guidance_weight * (
-                pred_velocity - uncond_pred_velocity
-            )
+        pred_velocity = uncond_pred_velocity + guidance_weight * (
+            pred_velocity - uncond_pred_velocity
+        )
     return pred_velocity
 
 
@@ -153,16 +151,13 @@ def generate_sample(
     else:
         type_of_content = "video"
 
-    start_mem = torch.cuda.memory_allocated()
-    with torch.profiler.record_function("text_embedders"):
-        with torch.no_grad():
-            bs_text_embed, text_cu_seqlens = text_embedder.encode(
-                [caption], type_of_content=type_of_content
-            )
-            bs_null_text_embed, null_text_cu_seqlens = text_embedder.encode(
-                [negative_caption], type_of_content=type_of_content
-            )
-    MemoryLogger.stats["text_embedders"] = torch.cuda.max_memory_allocated() - start_mem
+    with torch.no_grad():
+        bs_text_embed, text_cu_seqlens = text_embedder.encode(
+            [caption], type_of_content=type_of_content
+        )
+        bs_null_text_embed, null_text_cu_seqlens = text_embedder.encode(
+            [negative_caption], type_of_content=type_of_content
+        )
 
     for key in bs_text_embed:
         bs_text_embed[key] = bs_text_embed[key].to(device=device)
@@ -178,7 +173,6 @@ def generate_sample(
     text_rope_pos = torch.arange(text_cu_seqlens)
     null_text_rope_pos = torch.arange(null_text_cu_seqlens)
 
-    start_mem = torch.cuda.memory_allocated()
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             latent_visual = generate(
@@ -197,10 +191,8 @@ def generate_sample(
                 seed=seed,
                 progress=progress,
             )
-    MemoryLogger.stats["DiT"] = torch.cuda.max_memory_allocated() - start_mem
     torch.cuda.empty_cache()
 
-    start_mem = torch.cuda.memory_allocated()
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             images = latent_visual.reshape(
@@ -212,10 +204,8 @@ def generate_sample(
             )
             images = images.to(device=vae_device)
             images = (images / vae.config.scaling_factor).permute(0, 4, 1, 2, 3)
-            with torch.profiler.record_function("VAE"):
-                images = vae.decode(images).sample
+            images = vae.decode(images).sample
             images = ((images.clamp(-1.0, 1.0) + 1.0) * 127.5).to(torch.uint8)
-    MemoryLogger.stats["VAE"] = torch.cuda.max_memory_allocated() - start_mem
     torch.cuda.empty_cache()
 
     return images

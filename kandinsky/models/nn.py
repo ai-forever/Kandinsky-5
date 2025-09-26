@@ -22,7 +22,6 @@ else:
     except:
         FA = None
 
-@torch.profiler.record_function("norm")
 @torch.compile()
 @torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_scale_shift_norm(norm, x, scale, shift):
@@ -33,7 +32,6 @@ def apply_scale_shift_norm(norm, x, scale, shift):
 def apply_gate_sum(x, out, gate):
     return (x + gate * out).to(torch.bfloat16)
 
-@torch.profiler.record_function("rotary")
 @torch.compile()
 @torch.autocast(device_type="cuda", enabled=False)
 def apply_rotary(x, rope):
@@ -160,7 +158,6 @@ class Modulation(nn.Module):
         self.out_layer.weight.data.zero_()
         self.out_layer.bias.data.zero_()
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     @torch.autocast(device_type="cuda", dtype=torch.float32)
     def forward(self, x):
@@ -180,7 +177,6 @@ class MultiheadSelfAttentionEnc(nn.Module):
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def get_qkv(self, x):
         query = self.to_query(x)
@@ -194,20 +190,17 @@ class MultiheadSelfAttentionEnc(nn.Module):
 
         return query, key, value
 
-    @torch.profiler.record_function("norm")
     @torch.compile()
     def norm_qk(self, q, k):
         q = self.query_norm(q.float()).type_as(q)
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    @torch.profiler.record_function("SA")
     @torch.compile()
     def scaled_dot_product_attention(self, query, key, value):
         out = FA(q=query.unsqueeze(0), k=key.unsqueeze(0), v=value.unsqueeze(0))[0].flatten(-2, -1)
         return out
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def out_l(self, x):
         return self.out_layer(x)
@@ -237,7 +230,6 @@ class MultiheadSelfAttentionDec(nn.Module):
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def get_qkv(self, x):
         query = self.to_query(x)
@@ -251,20 +243,17 @@ class MultiheadSelfAttentionDec(nn.Module):
 
         return query, key, value
 
-    @torch.profiler.record_function("norm")
     @torch.compile()
     def norm_qk(self, q, k):
         q = self.query_norm(q.float()).type_as(q)
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    @torch.profiler.record_function("SA")
     @torch.compile()
     def attention(self, query, key, value):
         out = FA(q=query.unsqueeze(0), k=key.unsqueeze(0), v=value.unsqueeze(0))[0].flatten(-2, -1)
         return out
 
-    @torch.profiler.record_function("SA")
     @torch.compile(mode="max-autotune-no-cudagraphs", dynamic=True)
     def nabla(self, query, key, value, sparse_params=None):
         query = query.unsqueeze(0).transpose(1, 2).contiguous()
@@ -290,7 +279,6 @@ class MultiheadSelfAttentionDec(nn.Module):
         out = out.flatten(-2, -1)
         return out
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def out_l(self, x):
         return self.out_layer(x)
@@ -324,7 +312,6 @@ class MultiheadCrossAttention(nn.Module):
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def get_qkv(self, x, cond):
         query = self.to_query(x)
@@ -338,20 +325,17 @@ class MultiheadCrossAttention(nn.Module):
 
         return query, key, value
 
-    @torch.profiler.record_function("norm")
     @torch.compile()
     def norm_qk(self, q, k):
         q = self.query_norm(q.float()).type_as(q)
         k = self.key_norm(k.float()).type_as(k)
         return q, k
 
-    @torch.profiler.record_function("SA")
     @torch.compile()
     def attention(self, query, key, value):
         out = FA(q=query.unsqueeze(0), k=key.unsqueeze(0), v=value.unsqueeze(0))[0].flatten(-2, -1)
         return out
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def out_l(self, x):
         return self.out_layer(x)
@@ -372,7 +356,6 @@ class FeedForward(nn.Module):
         self.activation = nn.GELU()
         self.out_layer = nn.Linear(ff_dim, dim, bias=False)
 
-    @torch.profiler.record_function("linear")
     @torch.compile()
     def forward(self, x):
         return self.out_layer(self.activation(self.in_layer(x)))

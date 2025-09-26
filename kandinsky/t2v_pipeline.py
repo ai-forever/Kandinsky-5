@@ -5,7 +5,6 @@ import torchvision
 from torchvision.transforms import ToPILImage
 
 from .generation_utils import generate_sample
-from .memory_logger import MemoryLogger
 
 
 class Kandinsky5T2VPipeline:
@@ -102,63 +101,58 @@ class Kandinsky5T2VPipeline:
     ):
         num_steps = self.num_steps if num_steps is None else num_steps
         guidance_weight = self.guidance_weight if guidance_weight is None else guidance_weight
-        torch.cuda.reset_peak_memory_stats()
-        with torch.profiler.record_function("pipe_forward"):
-            # SEED
-            if seed is None:
-                if self.local_dit_rank == 0:
-                    seed = torch.randint(2**63 - 1, (1,)).to(self.local_dit_rank)
-                else:
-                    seed = torch.empty((1,), dtype=torch.int64).to(self.local_dit_rank)
+        # SEED
+        if seed is None:
+            if self.local_dit_rank == 0:
+                seed = torch.randint(2**63 - 1, (1,)).to(self.local_dit_rank)
+            else:
+                seed = torch.empty((1,), dtype=torch.int64).to(self.local_dit_rank)
 
-                if self.world_size > 1:
-                    torch.distributed.broadcast(seed, 0)
+            if self.world_size > 1:
+                torch.distributed.broadcast(seed, 0)
 
-                seed = seed.item()
+            seed = seed.item()
 
-            if self.resolution != 512:
-                raise NotImplementedError("Only 512 resolution is available for now")
+        if self.resolution != 512:
+            raise NotImplementedError("Only 512 resolution is available for now")
 
-            if (height, width) not in self.RESOLUTIONS[self.resolution]:
-                raise ValueError(
-                    f"Wrong height, width pair. Available (height, width) are: {self.RESOLUTIONS[self.resolution]}"
-                )
-
-            # PREPARATION
-            num_frames = 1 if time_length == 0 else time_length * 24 // 4 + 1
-
-            caption = text
-            if expand_prompts:
-                if self.local_dit_rank == 0:
-                    start_mem = torch.cuda.memory_allocated()
-                    with torch.profiler.record_function("expand_prompts"):
-                        caption = self.expand_prompt(caption)
-                    MemoryLogger.stats["expand_prompts"] = torch.cuda.max_memory_allocated() - start_mem
-                if self.world_size > 1:
-                    caption = [caption]
-                    torch.distributed.broadcast_object_list(caption, 0)
-                    caption = caption[0]
-
-            shape = (1, num_frames, height // 8, width // 8, 16)
-
-            # GENERATION
-            images = generate_sample(
-                shape,
-                caption,
-                self.dit,
-                self.vae,
-                self.conf,
-                text_embedder=self.text_embedder,
-                num_steps=num_steps,
-                guidance_weight=guidance_weight,
-                scheduler_scale=scheduler_scale,
-                negative_caption=negative_caption,
-                seed=seed,
-                device=self.device_map["dit"],
-                vae_device=self.device_map["vae"],
-                progress=progress
+        if (height, width) not in self.RESOLUTIONS[self.resolution]:
+            raise ValueError(
+                f"Wrong height, width pair. Available (height, width) are: {self.RESOLUTIONS[self.resolution]}"
             )
-            torch.cuda.empty_cache()
+
+        # PREPARATION
+        num_frames = 1 if time_length == 0 else time_length * 24 // 4 + 1
+
+        caption = text
+        if expand_prompts:
+            if self.local_dit_rank == 0:
+                caption = self.expand_prompt(caption)
+            if self.world_size > 1:
+                caption = [caption]
+                torch.distributed.broadcast_object_list(caption, 0)
+                caption = caption[0]
+
+        shape = (1, num_frames, height // 8, width // 8, 16)
+
+        # GENERATION
+        images = generate_sample(
+            shape,
+            caption,
+            self.dit,
+            self.vae,
+            self.conf,
+            text_embedder=self.text_embedder,
+            num_steps=num_steps,
+            guidance_weight=guidance_weight,
+            scheduler_scale=scheduler_scale,
+            negative_caption=negative_caption,
+            seed=seed,
+            device=self.device_map["dit"],
+            vae_device=self.device_map["vae"],
+            progress=progress
+        )
+        torch.cuda.empty_cache()
 
         # RESULTS
         if self.local_dit_rank == 0:
@@ -172,7 +166,6 @@ class Kandinsky5T2VPipeline:
                     if len(save_path) == len(return_images):
                         for path, image in zip(save_path, return_images):
                             image.save(path)
-                MemoryLogger.stats["total"] = torch.cuda.max_memory_allocated()
                 return return_images
             else:
                 if save_path is not None:
@@ -186,5 +179,4 @@ class Kandinsky5T2VPipeline:
                                 fps=24,
                                 options={"crf": "5"},
                             )
-                MemoryLogger.stats["total"] = torch.cuda.max_memory_allocated()
                 return images
