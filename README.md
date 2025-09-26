@@ -16,8 +16,7 @@ In this repository, we provide a family of diffusion models to generate a video 
 
 ## Project Updates
 
-- 🔥 **Source**: ```2025/09/29```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 Video` text-to-video generation model. Released checkpoints: `lite_pretrain_5s`, `lite_pretrain_10s`, `lite_sft_5s`, `lite_sft_10s`, `lite_nocfg_5s`, `lite_nocfg_10s`, `lite_distil_5s`, `lite_distil_10s` contains weight from pretrain, supervised finetuning, cfg distillation and distillation in 16 steps. 5s checkpoints are capable of generating videos up to 5 seconds long. 
-- 10s checkpoints is faster models checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm and capable to generate videos up to 10 seconds long.
+- 🔥 **Source**: ```2025/09/29```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 Video` text-to-video generation model. Released checkpoints: `lite_pretrain_5s`, `lite_pretrain_10s`, `lite_sft_5s`, `lite_sft_10s`, `lite_nocfg_5s`, `lite_nocfg_10s`, `lite_distil_5s`, `lite_distil_10s` contains weight from pretrain, supervised finetuning, cfg distillation and distillation in 16 steps. 5s checkpoints are capable of generating videos up to 5 seconds long. 10s checkpoints is faster models checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm and capable to generate videos up to 10 seconds long.
 
 ## Table of contents
 <ul>
