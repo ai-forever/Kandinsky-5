@@ -135,7 +135,9 @@ class Kandinsky5T2VPipeline:
                         caption = self.expand_prompt(caption)
                     MemoryLogger.stats["expand_prompts"] = torch.cuda.max_memory_allocated() - start_mem
                 if self.world_size > 1:
+                    caption = [caption]
                     torch.distributed.broadcast_object_list(caption, 0)
+                    caption = caption[0]
 
             shape = (1, num_frames, height // 8, width // 8, 16)
 
