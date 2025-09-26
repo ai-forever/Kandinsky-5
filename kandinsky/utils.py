@@ -1,5 +1,7 @@
 import os
 from typing import Optional, Union
+import numpy as np
+
 import torch
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
@@ -121,9 +123,7 @@ def get_T2V_pipeline(
         dit.accumulated_ratio = [1.0, 1.0]
         dit.retention_ratio = 0.2
         dit.residual_cache = [None, None]
-        # the [1.0]*1 is the padding value of first magnitude ratio. 
-        dit.mag_ratios = np.array([1.0]*2+[1.0]*98)
-        #[0.88556, 0.87688, 0.94313, 0.94916, 1.06431, 1.06496, 1.09917, 1.10019, 1.0463, 1.04599, 1.03523, 1.03574, 1.03616, 1.0356, 1.03347, 1.03495, 1.03811, 1.03887, 1.02237, 1.02189, 1.02875, 1.02939, 1.02677, 1.02752, 1.0264, 1.0278, 1.01866, 1.01876, 1.02226, 1.0225, 1.02018, 1.02086, 1.01971, 1.02083, 1.0224, 1.02355, 1.01953, 1.02023, 1.01971, 1.02072, 1.01781, 1.0188, 1.01881, 1.01945, 1.03258, 1.03438, 1.00541, 1.00518, 1.01771, 1.01763, 1.01897, 1.021, 1.01818, 1.01894, 1.01445, 1.01523, 1.01738, 1.01837, 1.0171, 1.01803, 1.01687, 1.01784, 1.01581, 1.01683, 1.0163, 1.01705, 1.01798, 1.01876, 1.01604, 1.01689, 1.01521, 1.01591, 1.01667, 1.01782, 1.01515, 1.01649, 1.01592, 1.01679, 1.01186, 1.01267, 1.01001, 1.0113, 1.01199, 1.01244, 1.00547, 1.00727, 0.99823, 1.00002, 0.98935, 0.99117, 0.97106, 0.97364, 0.93154, 0.93352, 0.83683, 0.8406])
+        dit.mag_ratios = np.array([1.0]*100)
         # Nearest interpolation when the num_steps is different from the length of mag_ratios
         if len(dit.mag_ratios) != 50 * 2:
             print(f'interpolate MAG RATIOS: curr len {len(dit.mag_ratios)}')
@@ -133,16 +133,7 @@ def get_T2V_pipeline(
                 [mag_ratio_con.reshape(-1, 1), mag_ratio_ucon.reshape(-1, 1)], axis=1).reshape(-1)
             dit.mag_ratios = interpolated_mag_ratios
 
-    # calibration, del before opensource
-    # dit.__class__.forward = magcache_calibration
-    # dit.cnt = 0
-    # dit.num_steps = 50 * 2
-    # dit.norm_ratio = [] # mean of magnitude ratio
-    # dit.norm_std = [] # std of magnitude ratio
-    # dit.cos_dis = [] # cosine distance of residual features
-    # dit.residual_cache = [None, None]
-
-    dit.load_state_dict(new_state_dict)
+    dit.load_state_dict(new_state_dict, assign=True)
     dit = dit.to(device_map["dit"])
 
     if world_size > 1:

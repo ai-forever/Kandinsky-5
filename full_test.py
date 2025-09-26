@@ -2,6 +2,7 @@ from kandinsky import get_T2V_pipeline
 
 import time 
 import gc
+import os
 
 import torch
 import torch._dynamo
@@ -13,33 +14,63 @@ def print_mem_stats(text):
     print(f"Peak GPU memory allocated {text}: {peak_memory_bytes / (1024**3):.2f} GB")
     torch.cuda.reset_peak_memory_stats()
 
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed) 
+
 
 def main():
     pipe = get_T2V_pipeline(
-        device_map={"dit": "cuda:0", "vae": "cuda:0", "text_embedder": "cuda:0" },
+        device_map={"dit": "cuda:0", "vae": "cuda:0", "text_embedder": "cuda:0"},
+        dit_path="/home/jovyan/dmitrienko/workspace/genai-team/kandinsky-5/kandinsky-5-0/saved_models/2B_r512ext_flash_8gpu_soft_rules/ema_model_10K/ema_shard_1gpu/model_bf16.safetensors",
+        magcache=False,
     )
     seed = 42
+    exp_name = 'bf16-full'
+    os.makedirs(f'./out/{exp_name}/', exist_ok=True)
+    prompt = 'A close up view of a glass sphere that has a zen garden within it. There is a small dwarf in the sphere who is raking the zen garden and creating patterns in the sand.,unusual subject,low'
+    mode = 'test'
 
-    # wu
-    for i in range(2):
+    if mode == 'time':
+        # wu
+        for i in range(2):
+            set_seed(seed+i)
+            start_time = time.perf_counter()
+            x = pipe(
+                prompt, time_length=5, width=768, height=512, 
+                save_path=f'./out/{exp_name}/wu{i}.mp4', seed=seed+i)
+            print(f"WU {i}, TIME ELAPSED: {time.perf_counter() - start_time}")
+
+            print_mem_stats(f'WU {i}')
+            del x
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        # test
+        set_seed(seed+2)
         start_time = time.perf_counter()
         x = pipe(
-            "a cat in a blue hat", time_length=5, width=768, height=512, 
-            save_path=f'./out/test/wu{i}.mp4', seed=seed+i)
-        print(f"WU {i}, TIME ELAPSED: {time.perf_counter() - start_time}")
+            prompt, time_length=5, width=768, height=512, 
+            save_path=f'./out/{exp_name}/test.mp4', seed=seed+2)
+        print(f"TEST, TIME ELAPSED: {time.perf_counter() - start_time}")
+        print_mem_stats(f'TEST')
 
-        print_mem_stats(f'WU {i}')
-        del x
-        torch.cuda.empty_cache()
-        gc.collect()
+    else:
+        path = '/home/jovyan/aigkargapoltseva/MovieGenVideoBench.txt'
+        with open(path, 'r') as f:
+            prompts = f.readlines()
 
-    # test
-    start_time = time.perf_counter()
-    x = pipe(
-        "a cat in a blue hat", time_length=5, width=768, height=512, 
-        save_path=f'./out/test/test.mp4', seed=seed+2)
-    print(f"TEST, TIME ELAPSED: {time.perf_counter() - start_time}")
-    print_mem_stats(f'WU {i}')
+        for i, prompt in enumerate(prompts):
+            prompt = prompt.strip()
+            print(prompt)
+
+            set_seed(seed + i)
+            start_time = time.perf_counter()
+            x = pipe(
+                prompt, time_length=5, width=768, height=512, 
+                save_path=f'./out/{exp_name}/{i}.mp4', seed=seed+i)
+            print(f"prompt {i}, TIME ELAPSED: {time.perf_counter() - start_time}")
+            print_mem_stats(f'TEST {i}')
 
 
 if __name__ == "__main__":

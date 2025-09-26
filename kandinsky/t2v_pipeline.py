@@ -91,7 +91,7 @@ class Kandinsky5T2VPipeline:
         seed: int = None,
         num_steps: int = 50,
         guidance_weight: float = 5.0,
-        scheduler_scale: float = 10.0,
+        scheduler_scale: float = 5.0,
         negative_caption: str = "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards",
         expand_prompts: bool = True,
         save_path: Union[str, List[str]] = None,
