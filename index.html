@@ -582,7 +582,7 @@
             }
             
             .video-scroll-container {
-                height: 220px;
+                height: 512px;
             }
         }
 
@@ -619,15 +619,15 @@
             }
             
             .video-scroll-container {
-                height: 400px;
+                height: 512px;
             }
             
             .video-scroll-item {
-                width: 250px;
+                width: 768px;
             }
         }
 
-        @media (max-width: 576px) {
+        @media (max-width: 768px) {
             .hero h1 {
                 font-size: 1.8rem;
             }
@@ -641,11 +641,11 @@
             }
             
             .video-scroll-container {
-                height: 350px;
+                height: 512px;
             }
             
             .video-scroll-item {
-                width: 220px;
+                width: 768px;
             }
         }
     </style>
@@ -712,21 +712,21 @@
             <p class="text-ru" style="display: none;">Топ-1 в своем классе среди открытых моделей.</p>
             <p class="text-en">A new lightweight diffusion model for video generation with 2 billion parameters.</p>
             <p class="text-en">Top-1 in its class among open source models.</p>
-            
-            <div class="cta-buttons">
-                <a href="#github" class="btn btn-primary github-link">
-                    <i class="fab fa-github"></i>
-                    <span class="text-ru" style="display: none;">GitHub репозиторий</span>
-                    <span class="text-en">GitHub Repository</span>
-                </a>
-                <a href="#showcase" class="btn btn-secondary examples-link">
-                    <i class="fas fa-play-circle"></i>
-                    <span class="text-ru" style="display: none;">Смотреть примеры</span>
-                    <span class="text-en">View Examples</span>
-                </a>
-            </div>
         </div>
     </section>
+
+    <div class="cta-buttons">
+        <a href="#github" class="btn btn-primary">
+            <i class="fab fa-github"></i>
+            <span class="text-ru" style="display: none;">GitHub репозиторий</span>
+            <span class="text-en">GitHub Repository</span>
+        </a>
+        <a href="#showcase" class="btn btn-secondary">
+            <i class="fas fa-play-circle"></i>
+            <span class="text-ru" style="display: none;">Смотреть примеры</span>
+            <span class="text-en">View Examples</span>
+        </a>
+    </div>
 
     <script>
         // smoothScrollTo исправлен для более точного скролла
@@ -783,7 +783,7 @@
                     </div>
                     <h3 class="text-ru" style="display: none;">Топ-1 в своем классе</h3>
                     <h3 class="text-en">Top-1 in its Class</h3>
-                    <p class="text-ru" style="display: none;">Превосходит модели Wan 2.2 (5B) и Wan 2.1 (14B) по качеству генерации, особенно для русскоязычных концептов.</p>
+                    <p class="text-ru" style="display: none;">Превосходит модели Wan 2.2 (5B) и Wan 2.1 (14B) по качеству генерации, особенно для русских концептов.</p>
                     <p class="text-en">Outperforms Wan 2.2 (5B) and Wan 2.1 (14B) models in generation quality, especially for Russian cultural concepts.</p>
                 </div>
             </div>
@@ -838,58 +838,114 @@
                 <div class="video-scroll-track" id="videoTrack">
                     <!-- Video items will be duplicated by JavaScript -->
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>City of the Future</h3>
-                            <p>Futuristic city with flying cars</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1036335634.mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>Russian Nature</h3>
-                            <p>Birch grove and river in Russian painting style</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1512407739%20(1).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>Space Journey</h3>
-                            <p>Flight through galaxy with special effects</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1512407739.mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>Historical Reconstruction</h3>
-                            <p>Ancient Russian life with detailed costumes</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904%20(1).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>Abstract Art</h3>
-                            <p>Kandinsky-style abstract animation</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904%20(2).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                     <div class="video-scroll-item">
-                        <div class="video-placeholder">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="video-info">
-                            <h3>Winter Fairy Tale</h3>
-                            <p>Snow-covered Russian village at night</p>
-                        </div>
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904.mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
+                    </div>
+                    <div class="video-scroll-item">
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/68941856%20(1).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
+                    </div>
+                    <div class="video-scroll-item">
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/68941856.mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
+                    </div>
+                    <div class="video-scroll-item">
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/test%20(1)%20(1).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
+                    </div>
+                    <div class="video-scroll-item">
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/test2%20(1).mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
+                    </div>
+                    <div class="video-scroll-item">
+                        <video 
+                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/video5237959401997893857.mp4"
+                            autoplay 
+                            loop 
+                            muted 
+                            playsinline
+                            style="width: 100%; height: auto; border-radius: 10px;">
+                        </video>
                     </div>
                 </div>
             </div>
@@ -1106,21 +1162,21 @@
                 </a>
                 
                 <div style="margin-top: 40px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                    <div class="badge">
+                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/stargazers" class="btn btn-secondary">
                         <i class="fas fa-star"></i>
                         <span class="text-ru" style="display: none;">Ставьте звезду на GitHub</span>
                         <span class="text-en">Star on GitHub</span>
-                    </div>
-                    <div class="badge">
+                    </a>
+                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/fork" class="btn btn-secondary">
                         <i class="fas fa-code-branch"></i>
                         <span class="text-ru" style="display: none;">Форкните репозиторий</span>
                         <span class="text-en">Fork the repository</span>
-                    </div>
-                    <div class="badge">
+                    </a>
+                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/issues" class="btn btn-secondary">
                         <i class="fas fa-bug"></i>
                         <span class="text-ru" style="display: none;">Сообщайте об ошибках</span>
                         <span class="text-en">Report issues</span>
-                    </div>
+                    </a>
                 </div>
             </div>
         </div>
@@ -1136,10 +1192,7 @@
                     <p class="text-ru" style="display: none;">Новая легковесная диффузионная модель для генерации видео с 2 миллиардами параметров.</p>
                     <p class="text-en">A new lightweight diffusion model for video generation with 2 billion parameters.</p>
                     <div class="social-links">
-                        <a href="#"><i class="fab fa-github"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-discord"></i></a>
-                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="https://github.com/gen-ai-team/kandinsky-5-inference"><i class="fab fa-github"></i></a>
                     </div>
                 </div>
                 
@@ -1155,29 +1208,16 @@
                 </div>
                 
                 <div class="footer-column">
-                    <h3 class="text-ru" style="display: none;">Ресурсы</h3>
-                    <h3 class="text-en">Resources</h3>
-                    <ul class="footer-links">
-                        <li><a href="#"><span class="text-ru" style="display: none;">Документация</span><span class="text-en">Documentation</span></a></li>
-                        <li><a href="#"><span class="text-ru" style="display: none;">Учебные материалы</span><span class="text-en">Tutorials</span></a></li>
-                        <li><a href="#"><span class="text-ru" style="display: none;">Блог</span><span class="text-en">Blog</span></a></li>
-                        <li><a href="#"><span class="text-ru" style="display: none;">Сообщество</span><span class="text-en">Community</span></a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-column">
                     <h3 class="text-ru" style="display: none;">Контакты</h3>
                     <h3 class="text-en">Contact</h3>
                     <ul class="footer-links">
-                        <li><a href="mailto:contact@example.com">contact@example.com</a></li>
-                        <li><a href="#">GitHub Issues</a></li>
-                        <li><a href="#">Discord Server</a></li>
+                        <li><a href="https://github.com/gen-ai-team/kandinsky-5-inference/issues">GitHub Issues</a></li>
                     </ul>
                 </div>
             </div>
             
             <div class="copyright">
-                <p>&copy; 2023 Kandinsky 5.0 Video Lite. <span class="text-ru" style="display: none;">Все права защищены.</span><span class="text-en">All rights reserved.</span></p>
+                <p>&copy; 2025 Kandinsky 5.0 Video Lite. <span class="text-ru" style="display: none;">Все права защищены.</span><span class="text-en">All rights reserved.</span></p>
             </div>
         </div>
     </footer>
