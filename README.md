@@ -40,7 +40,7 @@ TODO: add SBS
 ### Examples:
 
 <table border="0" style="width: 200; text-align: left; margin-top: 20px;">
-  <tr>
+  <!-- <tr>
       <td>
           <video src="https://github.com/user-attachments/assets/d5a0c11e-020b-4e56-9a17-5b3995890908" width=200 controls autoplay loop></video>
       </td>
@@ -61,7 +61,7 @@ TODO: add SBS
       <td>
           <video src="https://github.com/user-attachments/assets/4eb10e1d-60a0-4ff9-ad7e-9b5ab0a0fff8" width=200 controls autoplay loop></video>
       </td>
-  </tr>
+  </tr> -->
 
 </table>
 
