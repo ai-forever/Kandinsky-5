@@ -42,13 +42,13 @@ https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 
 | Model                               | config | video duration | NFE | Checkpoint | Latency (H100) | VBench score |
 |-------------------------------------|--------|----------------|-----|------------|----------------|--------------|
-| Kandinsky 5.0 T2V Lite SFT 5s       |        | 5s             | 100 |            |      139 s     |     84.02    |
-| Kandinsky 5.0 T2V Lite SFT 10s      |        | 10s            | 100 |            |      224 s     |     85.36    |
-| Kandinsky 5.0 T2V Lite pretrain 5s  |        | 5s             | 100 |            |                |              |
-| Kandinsky 5.0 T2V Lite pretrain 10s |        | 10s            | 100 |            |                |              |
+| Kandinsky 5.0 T2V Lite SFT 5s       |        | 5s             | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s) |      139 s     |     84.02    |
+| Kandinsky 5.0 T2V Lite SFT 10s      |        | 10s            | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s) |      224 s     |     85.36    |
+| Kandinsky 5.0 T2V Lite pretrain 5s  |        | 5s             | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s) |                |              |
+| Kandinsky 5.0 T2V Lite pretrain 10s |        | 10s            | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s) |                |              |
 | Kandinsky 5.0 T2V Lite no-CFG 5s    |        | 5s             | 50  |            |                |              |
 | Kandinsky 5.0 T2V Lite no-CFG 10s   |        | 10s            | 50  |            |                |              |
-| Kandinsky 5.0 T2V Lite distill 5s   |        | 5s             | 16  |            |       37 s     |              |
+| Kandinsky 5.0 T2V Lite distill 5s   |        | 5s             | 16  | 🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
 | Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
 
 ### Reesults: 
