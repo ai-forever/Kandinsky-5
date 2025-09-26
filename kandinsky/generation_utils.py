@@ -1,59 +1,26 @@
-import numpy as np
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "False"
+
+import torch
 from tqdm import tqdm 
 import gc
 
-import torch
-
-from .models.utils import create_doc_causal_mask, fast_doc_causal_sta
+from .models.utils import fast_sta_nabla
 
 
-def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
+def get_sparse_params(conf, batch_embeds, device):
     assert conf.model.dit_params.patch_size[0] == 1
-    T, H, W, C = batch_embeds["visual"].shape
-    visual_cu_seqlens = cu_seqlens["visual_rope"].to(device=device)
+    T, H, W, _ = batch_embeds["visual"].shape
     T, H, W = (
         T // conf.model.dit_params.patch_size[0],
         H // conf.model.dit_params.patch_size[1],
         W // conf.model.dit_params.patch_size[2],
     )
-    if conf.model.attention.type == "flex":
-        P = 8
-        block_mask, _ = fast_doc_causal_sta(
-            T,
-            H,
-            W,
-            P,
-            visual_cu_seqlens,
-            conf.model.attention.causal,
-            sta_local=conf.model.attention.local,
-            sta_global=conf.model.attention.glob,
-            return_mask=True,
-            window_size=conf.model.attention.window,
-        )
-        block_mask = block_mask.to(device=device)
-        torch_mask = None
+    if conf.model.attention.type == "nabla":
+        sta_mask = fast_sta_nabla(T, H // 8, W // 8, conf.model.attention.wT,
+                                  conf.model.attention.wH, conf.model.attention.wW, device=device)
         sparse_params = {
-            "block_mask": block_mask,
-            "torch_mask": torch_mask,
-            "attention_type": conf.model.attention.type,
-            "to_fractal": True,
-        }
-    elif conf.model.attention.type == "torch":
-        torch_mask = create_doc_causal_mask(
-            T, H, W, seq=visual_cu_seqlens, causal=conf.model.attention.causal
-        )
-        torch_mask = torch_mask.to(dtype=torch.bool, device=device)
-        block_mask = None
-        sparse_params = {
-            "block_mask": block_mask,
-            "torch_mask": torch_mask,
-            "attention_type": conf.model.attention.type,
-            "to_fractal": False,
-        }
-    elif conf.model.attention.type == "nabla":
-        sparse_params = {
-            "block_mask": None,
-            "torch_mask": None,
+            "sta_mask": sta_mask.unsqueeze_(0).unsqueeze_(0),
             "attention_type": conf.model.attention.type,
             "to_fractal": True,
             "P": conf.model.attention.P,
@@ -62,7 +29,6 @@ def get_sparse_params(conf, batch_embeds, cu_seqlens, device):
             "wH": conf.model.attention.wH,
             "add_sta": conf.model.attention.add_sta,
             "visual_shape": (T, H, W),
-            "visual_seqlens": visual_cu_seqlens,
             "method": getattr(conf.model.attention, "method", "topcdf"),
         }
     else:
@@ -78,16 +44,11 @@ def get_velocity(
     t,
     text_embeds,
     null_text_embeds,
-    visual_cu_seqlens,
-    text_cu_seqlens,
-    null_text_cu_seqlens,
     visual_rope_pos,
     text_rope_pos,
     null_text_rope_pos,
     guidance_weight,
     conf,
-    block_mask=None,
-    torch_mask=None,
     sparse_params=None,
 ):
     pred_velocity = dit(
@@ -95,8 +56,6 @@ def get_velocity(
         text_embeds["text_embeds"],
         text_embeds["pooled_embed"],
         t * 1000,
-        visual_cu_seqlens,
-        text_cu_seqlens,
         visual_rope_pos,
         text_rope_pos,
         scale_factor=conf.metrics.scale_factor,
@@ -108,8 +67,6 @@ def get_velocity(
             null_text_embeds["text_embeds"],
             null_text_embeds["pooled_embed"],
             t * 1000,
-            visual_cu_seqlens,
-            null_text_cu_seqlens,
             visual_rope_pos,
             null_text_rope_pos,
             scale_factor=conf.metrics.scale_factor,
@@ -129,9 +86,6 @@ def generate(
     num_steps,
     text_embeds,
     null_text_embeds,
-    visual_cu_seqlens,
-    text_cu_seqlens,
-    null_text_cu_seqlens,
     visual_rope_pos,
     text_rope_pos,
     null_text_rope_pos,
@@ -145,14 +99,12 @@ def generate(
     g.manual_seed(seed)
     img = torch.randn(*shape, device=device, generator=g)
 
-    sparse_params = get_sparse_params(
-        conf, {"visual": img}, {"visual_rope": visual_cu_seqlens}, device
-    )
+    sparse_params = get_sparse_params(conf, {"visual": img}, device)
     timesteps = torch.linspace(1, 0, num_steps + 1, device=device)
     timesteps = scheduler_scale * timesteps / (1 + (scheduler_scale - 1) * timesteps)
 
     for timestep, timestep_diff in tqdm(list(zip(timesteps[:-1], torch.diff(timesteps)))):
-        time = timestep.unsqueeze(0).repeat(visual_cu_seqlens.shape[0] - 1)
+        time = timestep.unsqueeze(0)
         if model.visual_cond:
             visual_cond = torch.zeros_like(img)
             visual_cond_mask = torch.zeros(
@@ -167,16 +119,11 @@ def generate(
             time,
             text_embeds,
             null_text_embeds,
-            visual_cu_seqlens,
-            text_cu_seqlens,
-            null_text_cu_seqlens,
             visual_rope_pos,
             text_rope_pos,
             null_text_rope_pos,
             guidance_weight,
             conf,
-            block_mask=None,
-            torch_mask=None,
             sparse_params=sparse_params,
         )
         img = img + timestep_diff * pred_velocity
@@ -185,7 +132,7 @@ def generate(
 
 def generate_sample(
     shape,
-    captions,
+    caption,
     dit,
     vae,
     conf,
@@ -207,32 +154,25 @@ def generate_sample(
 
     with torch.no_grad():
         bs_text_embed, text_cu_seqlens = text_embedder.encode(
-            captions, type_of_content=type_of_content
+            [caption], type_of_content=type_of_content
         )
         bs_null_text_embed, null_text_cu_seqlens = text_embedder.encode(
-            [negative_caption] * len(captions), type_of_content=type_of_content
+            [negative_caption], type_of_content=type_of_content
         )
 
     for key in bs_text_embed:
         bs_text_embed[key] = bs_text_embed[key].to(device=device)
         bs_null_text_embed[key] = bs_null_text_embed[key].to(device=device)
-    text_cu_seqlens = text_cu_seqlens.to(device=device)
-    null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)
+    text_cu_seqlens = text_cu_seqlens.to(device=device)[-1].item()
+    null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)[-1].item()
 
-    visual_cu_seqlens = duration * torch.arange(
-        bs + 1, dtype=torch.int32, device=device
-    )
     visual_rope_pos = [
-        torch.cat([torch.arange(end) for end in torch.diff(visual_cu_seqlens).cpu()]),
+        torch.arange(duration),
         torch.arange(shape[-3] // conf.model.dit_params.patch_size[1]),
         torch.arange(shape[-2] // conf.model.dit_params.patch_size[2]),
     ]
-    text_rope_pos = torch.cat(
-        [torch.arange(end) for end in torch.diff(text_cu_seqlens).cpu()]
-    )
-    null_text_rope_pos = torch.cat(
-        [torch.arange(end) for end in torch.diff(null_text_cu_seqlens).cpu()]
-    )
+    text_rope_pos = torch.arange(text_cu_seqlens)
+    null_text_rope_pos = torch.arange(null_text_cu_seqlens)
 
     with torch.no_grad():
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
@@ -243,9 +183,6 @@ def generate_sample(
                 num_steps,
                 bs_text_embed,
                 bs_null_text_embed,
-                visual_cu_seqlens,
-                text_cu_seqlens,
-                null_text_cu_seqlens,
                 visual_rope_pos,
                 text_rope_pos,
                 null_text_rope_pos,
