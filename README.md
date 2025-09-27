@@ -10,9 +10,9 @@
   <a href="">Habr</a> | <a href=>Project Page</a> | Technical Report (soon) | <a href=https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5> Models🤗 </a>
 </div>
 
-<h1>Kandinsky 5.0 Video: A family of diffusion models for Video generation</h1>
+<h1>Kandinsky 5.0: A family of diffusion models for Video & Image generation</h1>
 
-In this repository, we provide a family of diffusion models to generate a video given a textual prompt or an image (<em>Coming Soon</em>) and distilled model for a faster generation.
+In this repository, we provide a family of diffusion models to generate a video or an image (<em>Coming Soon</em>) given a textual prompt and distilled model for a faster generation.
 
 https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 
@@ -55,64 +55,25 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 #### Kandinsky 5.0 T2V Lite SFT
 
-<table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-spacing: 0;">
-  <tr>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/1.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/2.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/3.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/4.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/5.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/sft/6.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-  </tr>
-</table>
+https://github.com/user-attachments/assets/bc38821b-f9f1-46db-885f-1f70464669eb
+
+https://github.com/user-attachments/assets/9f64c940-4df8-4c51-bd81-a05de8e70fc3
+
+https://github.com/user-attachments/assets/77dd417f-e0bf-42bd-8d80-daffcd054add
+
+https://github.com/user-attachments/assets/385a0076-f01c-4663-aa46-6ce50352b9ed
+
+https://github.com/user-attachments/assets/7c1bcb31-cc7d-4385-9a33-2b0cc28393dd
+
+https://github.com/user-attachments/assets/990a8a0b-2df1-4bbc-b2e3-2859b6f1eea6
 
 #### Kandinsky 5.0 T2V Lite Distill
 
-<table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-spacing: 0;">
-  <tr>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/distill/1.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/distill/2.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-    <td style="padding: 0; margin: 0; line-height: 0;">
-      <video width="384" height="256" controls>
-        <source src="assets/generation_examples/distill/3.mp4" autoplay loop muted playsinline type="video/mp4">
-      </video>
-    </td>
-  </tr>
-</table>
+https://github.com/user-attachments/assets/861342f9-f576-4083-8a3b-94570a970d58
+
+https://github.com/user-attachments/assets/302e4e7d-781d-4a58-9b10-8c473d469c4b
+
+https://github.com/user-attachments/assets/3e70175c-40e5-4aec-b506-38006fe91a76
 
 ### Results:
 
