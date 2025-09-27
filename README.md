@@ -51,7 +51,7 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 *Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process.
 
-### Reesults:
+### Results:
 
 #### Side-by-Side evaluation
 TODO: add SBS
