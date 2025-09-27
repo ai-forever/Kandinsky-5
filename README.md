@@ -105,7 +105,24 @@ All models are available in two versions: for generating 5-second and 10-second 
 ### Results:
 
 #### Side-by-Side evaluation
-TODO: add SBS
+
+<table border="0" style="width: 400; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_sora.jpg" width=400 ></img>
+      </td>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.1_14B.jpg" width=400 ></img>
+      </td>
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.2_5B.jpg" width=400 ></img>
+      </td>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.2_A14B.jpg" width=400 ></img>
+      </td>
+
+</table>
 
 #### VBench results
 
@@ -195,7 +212,7 @@ device_map = {
     "text_embedder": torch.device('cuda:0')
 }
 
-pipe = get_T2V_pipeline(device_map)
+pipe = get_T2V_pipeline(device_map, conf_path="configs/config_5s_sft.yaml")
 
 images = pipe(
     seed=42,
