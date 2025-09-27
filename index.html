@@ -1,1331 +1,332 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html>
+
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Kandinsky 5.0 Video Lite - Lightweight Diffusion Model for Video Generation</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #10B981; /* Зелёный вместо фиолетового */
-            --primary-dark: #0D9C6D;
-            --secondary: #34D399; /* Салатовый акцент */
-            --dark: #1F2937;    /* Более тёмный оттенок */
-            --darker: #111827;  /* Ещё темнее */
-            --light: #F9FAFB;
-            --gray: #9CA3AF;
-            --transition: all 0.3s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-
-        html { scroll-behavior: smooth; }
-
-        body {
-            background-color: var(--darker);
-            color: var(--light);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Header & Navigation */
-        header {
-            background-color: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(10px);
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            padding: 15px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--light);
-            text-decoration: none;
-        }
-
-        .logo-icon {
-            color: var(--primary);
-            font-size: 1.8rem;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 30px;
-        }
-
-        .nav-links a {
-            color: var(--light);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .nav-links a:hover {
-            color: var(--primary);
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--primary);
-            transition: var(--transition);
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
-        }
-
-        .language-switcher {
-            display: flex;
-            gap: 10px;
-        }
-
-        .lang-btn {
-            background: transparent;
-            border: 1px solid var(--gray);
-            color: var(--gray);
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .lang-btn.active {
-            background-color: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-
-        .mobile-menu-btn {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--light);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 150px 0 100px;
-            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
-            animation: pulse 15s infinite linear;
-        }
-
-        @keyframes pulse {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1.2;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto 30px;
-            color: var(--gray);
-        }
-
-        .badges {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .badge.top {
-            background: linear-gradient(90deg, var(--secondary), var(--primary));
-            color: var(--darker);
-            font-weight: 600;
-        }
-
-        .cta-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--light);
-            border: 2px solid var(--primary);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(16, 185, 129, 0.1);
-            transform: translateY(-3px);
-        }
-
-        /* Sections */
-        .section {
-            padding: 100px 0;
-        }
-
-        section[id] {
-            scroll-margin-top: 90px;
-        }
-
-        .section-title {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        .section-title h2 {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-        }
-
-        .section-title p {
-            color: var(--gray);
-            max-width: 600px;
-            margin: 0 auto;
-            font-size: 1.1rem;
-            line-height: 1.7;
-        }
-
-        .section-title .subtitle {
-            display: block;
-            margin-top: 10px;
-            font-size: 1.1rem;
-            color: var(--gray);
-            line-height: 1.7;
-        }
-
-        /* Features Section */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 30px;
-            transition: var(--transition);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-            border-color: var(--primary);
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-
-        .feature-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-        }
-
-        .feature-card p {
-            color: var(--gray);
-            line-height: 1.7;
-        }
-
-        /* Video Showcase - Infinite Scroll */
-        .video-showcase {
-            background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .video-scroll-container {
-            position: relative;
-            height: 260px;
-            overflow: hidden;
-            margin: 0 auto;
-            max-width: 1000px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px 10px;
-        }
-
-        .video-scroll-track {
-            display: flex;
-            position: absolute;
-            left: 0;
-            top: 20px;
-            align-items: flex-start;
-            animation: scroll 40s linear infinite;
-            gap: 20px;
-            padding: 0 10px;
-        }
-
-        .video-scroll-track:hover {
-            animation-play-state: paused;
-        }
-
-        @keyframes scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        .video-scroll-item {
-            flex: 0 0 auto;
-            width: 300px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            overflow: hidden;
-            transition: var(--transition);
-        }
-
-        .video-scroll-item:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .video-placeholder {
-            height: 150px;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 3rem;
-        }
-
-        .video-info {
-            padding: 15px;
-        }
-
-        .video-info h3 {
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-
-        .video-info p {
-            color: var(--gray);
-            font-size: 0.85rem;
-            line-height: 1.5;
-        }
-
-        /* Comparison Section */
-        .comparison {
-            background: var(--darker);
-        }
-
-        .comparison-table {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 800px;
-        }
-
-        th, td {
-            padding: 15px 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        th {
-            background: rgba(255, 255, 255, 0.1);
-            font-weight: 600;
-        }
-
-        th:first-child, td:first-child {
-            text-align: left;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .winner {
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .rating {
-            display: inline-block;
-        }
-
-        .rating-stars {
-            color: var(--secondary);
-            font-size: 1.1rem;
-        }
-
-        /* Authors Section */
-        .authors-section {
-            background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
-        }
-
-        .authors-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-        }
-
-        .author-category {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .author-category h3 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .author-category h3 i {
-            font-size: 1.1rem;
-        }
-
-        .author-list {
-            list-style: none;
-            columns: 2;
-            column-gap: 20px;
-        }
-
-        .author-list li {
-            padding: 5px 0;
-            font-size: 0.95rem;
-            break-inside: avoid;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--dark);
-            padding: 60px 0 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            margin-bottom: 40px;
-        }
-
-        .footer-column h3 {
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            position: relative;
-            padding-bottom: 10px;
-        }
-
-        .footer-column h3::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 40px;
-            height: 3px;
-            background: var(--primary);
-        }
-
-        .footer-links {
-            list-style: none;
-        }
-
-        .footer-links li {
-            margin-bottom: 10px;
-        }
-
-        .footer-links a {
-            color: var(--gray);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .footer-links a:hover {
-            color: var(--primary);
-            padding-left: 5px;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .social-links a {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            color: var(--light);
-            transition: var(--transition);
-        }
-
-        .social-links a:hover {
-            background: var(--primary);
-            transform: translateY(-3px);
-        }
-
-        .copyright {
-            text-align: center;
-            padding-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--gray);
-            font-size: 0.9rem;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .hero h1 {
-                font-size: 2.8rem;
-            }
-            
-            .section {
-                padding: 80px 0;
-            }
-            
-            .author-list {
-                columns: 1;
-            }
-            
-            .video-scroll-container {
-                height: 512px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .nav-links, .language-switcher {
-                display: none;
-            }
-            
-            .mobile-menu-btn {
-                display: block;
-            }
-            
-            .hero {
-                padding: 120px 0 80px;
-            }
-            
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-            
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 100%;
-                max-width: 300px;
-                justify-content: center;
-            }
-            
-            .authors-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .video-scroll-container {
-                height: 512px;
-            }
-            
-            .video-scroll-item {
-                width: 768px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 1.8rem;
-            }
-            
-            .section-title h2 {
-                font-size: 2rem;
-            }
-            
-            .feature-card, .video-item, .author-category {
-                padding: 20px;
-            }
-            
-            .video-scroll-container {
-                height: 512px;
-            }
-            
-            .video-scroll-item {
-                width: 768px;
-            }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="description"
+    content="Kandinsky 5.0 is a family of diffusion models for Video & Image generation">
+  <meta name="keywords" content="Text-to-Video, Image-to-Video, Kandinsky 5.0, Kandinsky Video">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kandinsky 5.0</title>
+
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/video-camera.png">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
 </head>
+
 <body>
-    <!-- Header -->
-    <header>
-        <div class="container nav-container">
-            <a href="#" class="logo">
-                <i class="fas fa-video logo-icon"></i>
-                <span class="text-ru" style="display: none;">Kandinsky 5.0 Video Lite</span>
-                <span class="text-en">Kandinsky 5.0 Video Lite</span>
-            </a>
-            
-            <nav class="nav-links">
-                <a href="#about" class="text-ru" style="display: none;">О модели</a>
-                <a href="#about" class="text-en">About</a>
-                <a href="#features" class="text-ru" style="display: none;">Возможности</a>
-                <a href="#features" class="text-en">Features</a>
-                <a href="#showcase" class="text-ru" style="display: none;">Примеры</a>
-                <a href="#showcase" class="text-en">Examples</a>
-                <a href="#comparison" class="text-ru" style="display: none;">Сравнение</a>
-                <a href="#comparison" class="text-en">Comparison</a>
-                <a href="#authors" class="text-ru" style="display: none;">Авторы</a>
-                <a href="#authors" class="text-en">Authors</a>
-                <a href="#github" class="text-ru" style="display: none;">GitHub</a>
-                <a href="#github" class="text-en">GitHub</a>
-            </nav>
-            
-            <div class="language-switcher">
-                <button class="lang-btn" data-lang="ru">RU</button>
-                <button class="lang-btn active" data-lang="en">EN</button>
-            </div>
-            
-            <button class="mobile-menu-btn">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-    </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="badges">
-                <div class="badge top">
-                    <i class="fas fa-trophy"></i>
-                    <span class="text-ru" style="display: none;">Топ-1 в Open Source</span>
-                    <span class="text-en">Top-1 in Open Source</span>
-                </div>
-                <div class="badge">
-                    <i class="fas fa-bolt"></i>
-                    <span class="text-ru" style="display: none;">2B параметров</span>
-                    <span class="text-en">2B parameters</span>
-                </div>
-                <div class="badge">
-                    <i class="fas fa-language"></i>
-                    <span class="text-ru" style="display: none;">Лучшая генерация русских культурных концептов</span>
-                    <span class="text-en">Best generation of Russian cultural concepts</span>
-                </div>
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Kandinsky 5.0</h1>
+             <div class="is-size-5 publication-authors">
+              <span class="author-block">&nbsp;&nbsp;&nbsp;</span>
             </div>
-            
-            <h1>Kandinsky 5.0 Video Lite</h1>
-            <p class="text-ru" style="display: none;">Новая легковесная диффузионная модель для генерации видео с 2 миллиардами параметров.</p>
-            <p class="text-ru" style="display: none;">Топ-1 в своем классе среди открытых моделей.</p>
-            <p class="text-en">A new lightweight diffusion model for video generation with 2 billion parameters.</p>
-            <p class="text-en">Top-1 in its class among open source models.</p>
-        </div>
-    </section>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">A family of diffusion models for Video & Image generation&nbsp;&nbsp;&nbsp;</span>
+            </div>
 
-    <div class="cta-buttons">
-        <a href="#github" class="btn btn-primary">
-            <i class="fab fa-github"></i>
-            <span class="text-ru" style="display: none;">GitHub репозиторий</span>
-            <span class="text-en">GitHub Repository</span>
-        </a>
-        <a href="#showcase" class="btn btn-secondary">
-            <i class="fas fa-play-circle"></i>
-            <span class="text-ru" style="display: none;">Смотреть примеры</span>
-            <span class="text-en">View Examples</span>
-        </a>
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- Arxiv Link. -->
+                <span class="link-block">
+                  <a href=" " class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>arXiv (soon)</span>
+                  </a>
+                </span>
+                <!-- Code Link. -->
+                <span class="link-block">
+                  <a href="https://github.com/gen-ai-team/kandinsky-5-inference"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <script>
-        // smoothScrollTo исправлен для более точного скролла
-        function smoothScrollTo(targetId) {
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
-                const offset = 70;
-                window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
-                const navLinks = document.querySelector('.nav-links');
-                const langSwitcher = document.querySelector('.language-switcher');
-                if (window.innerWidth <= 768) {
-                    navLinks.style.display = 'none';
-                    langSwitcher.style.display = 'none';
-                }
-            }
-        }
-    </script>
-
-    <!-- About Section -->
-    <section id="about" class="section">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">О модели</h2>
-                <h2 class="text-en">About the Model</h2>
-                <p class="text-ru" style="display: none;">Kandinsky 5.0 Video Lite - это инновационная модель для генерации видео, сочетающая высокое качество и эффективность.</p>
-                <p class="text-en">Kandinsky 5.0 Video Lite is an innovative model for video generation that combines high quality and efficiency.</p>
-            </div>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <h3 class="text-ru" style="display: none;">Генерация видео</h3>
-                    <h3 class="text-en">Video Generation</h3>
-                    <p class="text-ru" style="display: none;">Модель специализируется на создании высококачественных видео по текстовым описаниям с превосходной детализацией и плавностью.</p>
-                    <p class="text-en">The model specializes in creating high-quality videos from text descriptions with excellent detail and smoothness.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-weight-hanging"></i>
-                    </div>
-                    <h3 class="text-ru" style="display: none;">Легковесная архитектура</h3>
-                    <h3 class="text-en">Lightweight Architecture</h3>
-                    <p class="text-ru" style="display: none;">Всего 2 миллиарда параметров обеспечивают эффективную работу без ущерба для качества генерируемого контента.</p>
-                    <p class="text-en">Only 2 billion parameters ensure efficient operation without compromising the quality of generated content.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-crown"></i>
-                    </div>
-                    <h3 class="text-ru" style="display: none;">Топ-1 в своем классе</h3>
-                    <h3 class="text-en">Top-1 in its Class</h3>
-                    <p class="text-ru" style="display: none;">Превосходит модели Wan 2.2 (5B) и Wan 2.1 (14B) по качеству генерации, особенно для русских концептов.</p>
-                    <p class="text-en">Outperforms Wan 2.2 (5B) and Wan 2.1 (14B) models in generation quality, especially for Russian cultural concepts.</p>
-                </div>
-            </div>
+  <section class="hero is-small">
+    <div class="columns is-centered has-text-centered">
+        <div class="content has-text-justified">
+          <div class="container">
+            <video controls="controls" autoplay="autoplay">
+              <source src="./assets/generation_examples/stone.mp4" type="video/mp4" />
+            </video>
+          </div>
         </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Features Section -->
-    <section id="features" class="section video-showcase">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">Ключевые возможности</h2>
-                <h2 class="text-en">Key Features</h2>
-                <p class="text-ru" style="display: none;">Мощные функции, которые делают Kandinsky 5.0 Video Lite лидером в своем классе</p>
-                <p class="text-en">Powerful features that make Kandinsky 5.0 Video Lite a leader in its class</p>
-            </div>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-rocket"></i>
-                    </div>
-                    <h3 class="text-ru" style="display: none;">Высокая производительность</h3>
-                    <h3 class="text-en">High Performance</h3>
-                    <p class="text-ru" style="display: none;">Быстрая генерация видео даже на оборудовании среднего уровня благодаря оптимизированной архитектуре.</p>
-                    <p class="text-en">Fast video generation even on mid-range hardware thanks to optimized architecture.</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <h3 class="text-ru" style="display: none;">Генерация русских культурных концептов</h3>
-                    <h3 class="text-en">Russian Cultural Concepts Generation</h3>
-                    <p class="text-ru" style="display: none;">Лучшая среди открытых моделей генерация русских культурных концептов.</p>
-                    <p class="text-en">The best among open models in generating Russian cultural concepts.</p>
-                </div>
-            </div>
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Summary</h2>
+          <div class="content has-text-justified">
+            <p>
+              <h2 class="title is-3">Kandinsky 5.0 T2V Lite</h2>
+              Kandinsky 5.0 T2V Lite is a lightweight video generation model (2B parameters) that ranks #1 among open-source models in its class. It outperforms larger Wan models (5B and 14B) and offers the best understanding of Russian concepts in the open-source ecosystem.<br/>
+              <br/>
+              We provide 8 model variants, each optimized for different use cases:<br/>
+              <ul>
+                <li>SFT model — delivers the highest generation quality;</li>
+                <li>CFG-distilled — runs 2× faster;</li>
+                <li>Diffusion-distilled — enables low-latency generation with minimal quality loss;</li>
+                <li>Pretrain model — designed for fine-tuning by researchers and enthusiasts.</li>
+              </ul>
+              All models are available in two versions: for generating 5-second and 10-second videos.<br/>
+            </p>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <!-- Video Showcase -->
-    <section id="showcase" class="section video-showcase">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">Примеры видео</h2>
-                <h2 class="text-en">Video Examples</h2>
-                <p class="text-ru" style="display: none;">Оцените качество генерации видео с помощью Kandinsky 5.0 Video Lite</p>
-                <p class="text-en">Evaluate the video generation quality with Kandinsky 5.0 Video Lite</p>
-            </div>
-            
-            <div class="video-scroll-container">
-                <div class="video-scroll-track" id="videoTrack">
-                    <!-- Video items will be duplicated by JavaScript -->
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1036335634.mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1512407739%20(1).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/1512407739.mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904%20(1).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904%20(2).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/642423904.mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/68941856%20(1).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/68941856.mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/test%20(1)%20(1).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/test2%20(1).mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                    <div class="video-scroll-item">
-                        <video 
-                            src="https://github.com/gen-ai-team/kandinsky-5-inference/raw/refs/heads/main/assets/generation_examples/video5237959401997893857.mp4"
-                            autoplay 
-                            loop 
-                            muted 
-                            playsinline
-                            style="width: 100%; height: auto; border-radius: 10px;">
-                        </video>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+  <section class="section">
 
-    <!-- Comparison Section -->
-    <section id="comparison" class="section comparison">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">Сравнение с другими моделями</h2>
-                <h2 class="text-en">Comparison with Other Models</h2>
-                <p class="text-ru" style="display: none;">Kandinsky 5.0 Video Lite демонстрирует превосходство над конкурентами</p>
-                <p class="text-en">Kandinsky 5.0 Video Lite demonstrates superiority over competitors</p>
-            </div>
-            
-            <div class="comparison-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Prompt Following</th>
-                            <th>Visual Quality</th>
-                            <th>Motion Quality</th>
-                            <th>Generation Speed</th>
-                            <th>Russian Concepts</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Kandinsky 5.0 Video Lite (2B)</strong></td>
-                            <td class="winner">
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★★</div>
-                                    <div>Excellent</div>
-                                </div>
-                            </td>
-                            <td class="winner">
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★★</div>
-                                    <div>Excellent</div>
-                                </div>
-                            </td>
-                            <td class="winner">
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★★</div>
-                                    <div>Excellent</div>
-                                </div>
-                            </td>
-                            <td class="winner">
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★★</div>
-                                    <div>Excellent</div>
-                                </div>
-                            </td>
-                            <td class="winner">
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★★</div>
-                                    <div>Excellent</div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Wan 2.2 (5B)</td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★★☆☆</div>
-                                    <div>Good</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★★☆☆</div>
-                                    <div>Good</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★☆☆☆</div>
-                                    <div>Fair</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★☆☆☆</div>
-                                    <div>Fair</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★☆☆☆☆</div>
-                                    <div>Poor</div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Wan 2.1 (14B)</td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★☆</div>
-                                    <div>Very Good</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★★★☆</div>
-                                    <div>Very Good</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★★☆☆</div>
-                                    <div>Good</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★☆☆☆☆</div>
-                                    <div>Poor</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="rating">
-                                    <div class="rating-stars">★★☆☆☆</div>
-                                    <div>Fair</div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <!-- Authors Section -->
-    <section id="authors" class="section authors-section">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">Команда разработчиков</h2>
-                <h2 class="text-en">Development Team</h2>
-                <p class="text-ru" style="display: none;">Люди, которые создали Kandinsky 5.0 Video Lite</p>
-                <p class="text-en">The people behind Kandinsky 5.0 Video Lite</p>
-            </div>
-            
-            <div class="authors-container">
-                <div class="author-category">
-                    <h3><i class="fas fa-user"></i> Project Lead</h3>
-                    <ul class="author-list">
-                        <li><span class="text-ru" style="display: none;">Денис Димитров</span><span class="text-en">Denis Dimitrov</span></li>
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Overall pipeline</h2>
+          <div class="content has-text-justified">
+            <p>
+              <img src="./static/images/pipeline.png" class="interpolation-image" alt="Interpolate start reference image." />
+              <header>
+                <h2>Kandinsky 5.0 – High-Level Architecture</h2>
+              </header>
+              <section>
+                <h2>Core paradigm</h2>
+                <p>
+                  <strong>Latent diffusion pipeline</strong> with <strong>Flow Matching</strong>.
+                  <br />
+                  <strong>Diffusion Transformer (DiT)</strong> as the main generative backbone with <strong>cross-attention to text embeddings</strong>.
+                </p>
+                <ul>
+                  <li><strong>Qwen2.5-VL</strong> provides text embeddings.</li>
+                  <li><strong>HunyuanVideo 3D VAE</strong> encodes/decodes video into a latent space.</li>
+                  <li><strong>DiT</strong> is the main generative module using cross-attention to condition on text.</li>
+                </ul>
+              </section>
+              <br />
+              <section>
+                <h2>Model Inputs</h2>
+                <ol>
+                  <li>
+                    <strong>Text</strong>
+                    <ul>
+                      <li>Embeddings from <strong>Qwen2.5-VL</strong> (transformer decoder).</li>
+                      <li>Augmented with <strong>1D Rotary Position Embeddings (RoPE)</strong>.</li>
+                      <li>Refined by the <strong>Linguistic Token Refiner</strong>, which prepares text tokens for cross-attention inside DiT.</li>
                     </ul>
-                </div>
-                <div class="author-category">
-                    <h3><i class="fas fa-users"></i> Team Leads</h3>
-                    <ul class="author-list">
-                        <li><span class="text-ru" style="display: none;">Владимир Архипкин</span><span class="text-en">Vladimir Arkhipkin</span></li>
-                        <li><span class="text-ru" style="display: none;">Владимир Корвяков</span><span class="text-en">Vladimir Korviakov</span></li>
-                        <li><span class="text-ru" style="display: none;">Николай Герасименко</span><span class="text-en">Nikolai Gerasimenko</span></li>
-                        <li><span class="text-ru" style="display: none;">Денис Пархоменко</span><span class="text-en">Denis Parkhomenko</span></li>
+                  </li>
+
+                  <li>
+                    <strong>Time</strong>
+                    <ul>
+                      <li>Diffusion step index.</li>
+                      <li>Encoded with <strong>sinusoidal positional encoding + MLP</strong>.</li>
+                      <li>Fused with a global <strong>CLIP text embedding</strong> of the video description.</li>
                     </ul>
-                </div>
-                <div class="author-category">
-                    <h3><i class="fas fa-code"></i> Core Contributors</h3>
-                    <ul class="author-list">
-                        <li><span class="text-ru" style="display: none;">Алексей Летуновский</span><span class="text-en">Alexey Letunovskiy</span></li>
-                        <li><span class="text-ru" style="display: none;">Мария Ковалева</span><span class="text-en">Maria Kovaleva</span></li>
-                        <li><span class="text-ru" style="display: none;">Иван Кириллов</span><span class="text-en">Ivan Kirillov</span></li>
-                        <li><span class="text-ru" style="display: none;">Лев Новицкий</span><span class="text-en">Lev Novitskiy</span></li>
-                        <li><span class="text-ru" style="display: none;">Денис Копосов</span><span class="text-en">Denis Koposov</span></li>
-                        <li><span class="text-ru" style="display: none;">Дмитрий Михайлов</span><span class="text-en">Dmitrii Mikhailov</span></li>
-                        <li><span class="text-ru" style="display: none;">Анна Аверченкова</span><span class="text-en">Anna Averchenkova</span></li>
-                        <li><span class="text-ru" style="display: none;">Андрей Шуткин</span><span class="text-en">Andrey Shutkin</span></li>
-                        <li><span class="text-ru" style="display: none;">Юлия Агафонова</span><span class="text-en">Julia Agafonova</span></li>
-                        <li><span class="text-ru" style="display: none;">Ольга Ким</span><span class="text-en">Olga Kim</span></li>
-                        <li><span class="text-ru" style="display: none;">Анастасия Каргапольцева</span><span class="text-en">Anastasiia Kargapoltseva</span></li>
-                        <li><span class="text-ru" style="display: none;">Никита Киселев</span><span class="text-en">Nikita Kiselev</span></li>
+                  </li>
+
+                  <li>
+                    <strong>CLIP Text Embedding</strong>
+                      <ul>
+                      <li>A single global embedding of the full video description.</li>
+                      <li>Provides semantic conditioning in addition to token-level embeddings.</li>
                     </ul>
-                </div>
-                <div class="author-category">
-                    <h3><i class="fas fa-user-friends"></i> Contributors</h3>
-                    <ul class="author-list">
-                        <li><span class="text-ru" style="display: none;">Анна Дмитриенко</span><span class="text-en">Anna Dmitrienko</span></li>
-                        <li><span class="text-ru" style="display: none;">Анастасия Мальцева</span><span class="text-en">Anastasia Maltseva</span></li>
-                        <li><span class="text-ru" style="display: none;">Кирилл Чернышев</span><span class="text-en">Kirill Chernyshev</span></li>
-                        <li><span class="text-ru" style="display: none;">Илья Васильев</span><span class="text-en">Ilia Vasiliev</span></li>
-                        <li><span class="text-ru" style="display: none;">Вячеслав Васильев</span><span class="text-en">Viacheslav Vasilev</span></li>
-                        <li><span class="text-ru" style="display: none;">Владимир Половников</span><span class="text-en">Vladimir Polovnikov</span></li>
-                        <li><span class="text-ru" style="display: none;">Юрий Колабушин</span><span class="text-en">Yury Kolabushin</span></li>
-                        <li><span class="text-ru" style="display: none;">Александр Белых</span><span class="text-en">Alexander Belykh</span></li>
-                        <li><span class="text-ru" style="display: none;">Михаил Мамаев</span><span class="text-en">Mikhail Mamaev</span></li>
-                        <li><span class="text-ru" style="display: none;">Анастасия Аляскина</span><span class="text-en">Anastasia Aliaskina</span></li>
-                        <li><span class="text-ru" style="display: none;">Татьяна Никулина</span><span class="text-en">Tatiana Nikulina</span></li>
-                        <li><span class="text-ru" style="display: none;">Полина Гаврилова</span><span class="text-en">Polina Gavrilova</span></li>
+                  </li>
+
+                  <li>
+                    <strong>Visual</strong>
+                    <ul>
+                      <li>Latents from the <strong>HunyuanVideo 3D VAE</strong>.</li>
+                      <li>Equipped with <strong>3D Rotary Position Embeddings</strong> for spatial–temporal alignment.</li>
                     </ul>
-                </div>
-            </div>
+                  </li>
+                </ol>
+              </section>
+            </p>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <!-- GitHub Section -->
-    <section id="github" class="section">
-        <div class="container">
-            <div class="section-title">
-                <h2 class="text-ru" style="display: none;">Начните использовать модель</h2>
-                <h2 class="text-en">Start Using the Model</h2>
-                <p class="text-ru" style="display: none;">Посетите GitHub репозиторий для получения кода, документации и инструкций по установке</p>
-                <p class="text-en">Visit the GitHub repository for code, documentation and installation instructions</p>
-            </div>
-            
-            <div style="text-align: center;">
-                <a href="https://github.com/gen-ai-team/kandinsky-5-inference" class="btn btn-primary" style="font-size: 1.2rem; padding: 15px 40px;">
-                    <i class="fab fa-github"></i>
-                    <span class="text-ru" style="display: none;">Перейти на GitHub</span>
-                    <span class="text-en">Go to GitHub</span>
-                </a>
-                
-                <div style="margin-top: 40px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/stargazers" class="btn btn-secondary">
-                        <i class="fas fa-star"></i>
-                        <span class="text-ru" style="display: none;">Ставьте звезду на GitHub</span>
-                        <span class="text-en">Star on GitHub</span>
-                    </a>
-                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/fork" class="btn btn-secondary">
-                        <i class="fas fa-code-branch"></i>
-                        <span class="text-ru" style="display: none;">Форкните репозиторий</span>
-                        <span class="text-en">Fork the repository</span>
-                    </a>
-                    <a href="https://github.com/gen-ai-team/kandinsky-5-inference/issues" class="btn btn-secondary">
-                        <i class="fas fa-bug"></i>
-                        <span class="text-ru" style="display: none;">Сообщайте об ошибках</span>
-                        <span class="text-en">Report issues</span>
-                    </a>
-                </div>
-            </div>
+  <section class="hero is-small">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+      <h2 class="title is-3">Text-to-Video</h2>
+        <div class="content has-text-justified">
+          <div class="container">
+            <table class="center">
+              <tbody>
+                <tr<td>
+                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  </tr>
+                  <tr>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/1.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/2.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/3.mp4" type="video/mp4" /></video></td>
+                  </tr>
+                  <tr>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/4.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/5.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/sft/6.mp4" type="video/mp4" /></video></td>
+                  </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-column">
-                    <h3 class="text-ru" style="display: none;">Kandinsky 5.0 Video Lite</h3>
-                    <h3 class="text-en">Kandinsky 5.0 Video Lite</h3>
-                    <p class="text-ru" style="display: none;">Новая легковесная диффузионная модель для генерации видео с 2 миллиардами параметров.</p>
-                    <p class="text-en">A new lightweight diffusion model for video generation with 2 billion parameters.</p>
-                    <div class="social-links">
-                        <a href="https://github.com/gen-ai-team/kandinsky-5-inference"><i class="fab fa-github"></i></a>
-                    </div>
-                </div>
-                
-                <div class="footer-column">
-                    <h3 class="text-ru" style="display: none;">Ссылки</h3>
-                    <h3 class="text-en">Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="#about"><span class="text-ru" style="display: none;">О модели</span><span class="text-en">About</span></a></li>
-                        <li><a href="#features"><span class="text-ru" style="display: none;">Возможности</span><span class="text-en">Features</span></a></li>
-                        <li><a href="#showcase"><span class="text-ru" style="display: none;">Примеры</span><span class="text-en">Examples</span></a></li>
-                        <li><a href="#comparison"><span class="text-ru" style="display: none;">Сравнение</span><span class="text-en">Comparison</span></a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-column">
-                    <h3 class="text-ru" style="display: none;">Контакты</h3>
-                    <h3 class="text-en">Contact</h3>
-                    <ul class="footer-links">
-                        <li><a href="https://github.com/gen-ai-team/kandinsky-5-inference/issues">GitHub Issues</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="copyright">
-                <p>&copy; 2025 Kandinsky 5.0 Video Lite. <span class="text-ru" style="display: none;">Все права защищены.</span><span class="text-en">All rights reserved.</span></p>
-            </div>
+<section class="hero is-small">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+      <h2 class="title is-3">Distilled model</h2>
+        <div class="content has-text-justified">
+          <div class="container">
+            <table class="center">
+              <tbody>
+                <tr<td>
+                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  </tr>
+                  <tr>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/1.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/2.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/3.mp4" type="video/mp4" /></video></td>
+                  </tr>
+                  <tr>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
+                  </tr>
+                  <tr>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/4.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/5.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/distill/6.mp4" type="video/mp4" /></video></td>
+                  </tr>
+                  <tr>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
+                  </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-    </footer>
+      </div>
+    </div>
+  </section>
 
-    <script>
-        // Language switching functionality
-        document.querySelectorAll('.lang-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const lang = this.getAttribute('data-lang');
-                
-                // Update active button
-                document.querySelectorAll('.lang-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                this.classList.add('active');
-                
-                // Show/hide language-specific content
-                document.querySelectorAll('.text-en').forEach(element => {
-                    element.style.display = lang === 'en' ? 'block' : 'none';
-                });
-                
-                document.querySelectorAll('.text-ru').forEach(element => {
-                    element.style.display = lang === 'ru' ? 'block' : 'none';
-                });
-            });
-        });
+  <section class="section" id="Authors">
+        <div class="container is-max-desktop content">
+          <h2 class="title">Authors</h2>
+<B>Project Leader:</B> Denis Dimitrov</br>
 
-        // Mobile menu functionality
-        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
-            const navLinks = document.querySelector('.nav-links');
-            const langSwitcher = document.querySelector('.language-switcher');
-            
-            if (navLinks.style.display === 'flex') {
-                navLinks.style.display = 'none';
-                langSwitcher.style.display = 'none';
-            } else {
-                navLinks.style.display = 'flex';
-                langSwitcher.style.display = 'flex';
-                navLinks.style.flexDirection = 'column';
-                navLinks.style.position = 'absolute';
-                navLinks.style.top = '70px';
-                navLinks.style.left = '0';
-                navLinks.style.width = '100%';
-                navLinks.style.backgroundColor = 'var(--darker)';
-                navLinks.style.padding = '20px';
-                navLinks.style.gap = '15px';
-                
-                langSwitcher.style.position = 'absolute';
-                langSwitcher.style.top = 'calc(70px + 180px)';
-                langSwitcher.style.left = '20px';
-            }
-        });
+<B>Team Leads:</B> Vladimir Arkhipkin, Vladimir Korviakov, Nikolai Gerasimenko, Denis Parkhomenko</br>
 
-        // Infinite video scroll functionality
-        function setupInfiniteScroll() {
-            const track = document.getElementById('videoTrack');
-            const items = track.innerHTML;
-            
-            // Duplicate items for seamless scrolling
-            track.innerHTML = items + items;
-        }
+<B>Core Contributors:</B> Alexey Letunovskiy, Maria Kovaleva, Ivan Kirillov, Lev Novitskiy, Denis Koposov, Dmitrii Mikhailov, Anna Averchenkova, Andrey Shutkin, Julia Agafonova, Olga Kim, Anastasiia Kargapoltseva, Nikita Kiselev</br>
 
-        // Smooth scrolling function
-        function smoothScrollTo(targetId) {
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                window.scrollTo({
-                    top: targetElement.offsetTop - 80,
-                    behavior: 'smooth'
-                });
-                
-                // Close mobile menu if open
-                const navLinks = document.querySelector('.nav-links');
-                const langSwitcher = document.querySelector('.language-switcher');
-                if (window.innerWidth <= 768) {
-                    navLinks.style.display = 'none';
-                    langSwitcher.style.display = 'none';
-                }
-            }
-        }
+<B>Contributors:</B> Anna Dmitrienko,  Anastasia Maltseva, Kirill Chernyshev, Ilia Vasiliev, Viacheslav Vasilev, Vladimir Polovnikov, Yury Kolabushin, Alexander Belykh, Mikhail Mamaev, Anastasia Aliaskina, Tatiana Nikulina, Polina Gavrilova</br>
+        </div>
+      </section>
+  </section>
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            setupInfiniteScroll();
-            
-            // Add click events to CTA buttons
-            document.querySelector('.github-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                smoothScrollTo('#github');
-            });
-            
-            document.querySelector('.examples-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                smoothScrollTo('#showcase');
-            });
-            
-            // Smooth scrolling for all anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    smoothScrollTo(targetId);
-                });
-            });
-        });
-    </script>
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>
+
+@misc{mikhailov2025nablanablaneighborhoodadaptiveblocklevel,
+      title={$\nabla$NABLA: Neighborhood Adaptive Block-Level Attention}, 
+      author={Dmitrii Mikhailov and Aleksey Letunovskiy and Maria Kovaleva and Vladimir Arkhipkin and Vladimir Korviakov and Vladimir Polovnikov and Viacheslav Vasilev and Evelina Sidorova and Denis Dimitrov},
+      year={2025},
+      eprint={2507.13546},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2507.13546}, 
+}
+</code></pre>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p>
+              This website is licensed under a <a rel="license"
+                href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
+                Commons Attribution-ShareAlike 4.0 International License</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
 </body>
+
 </html>
