@@ -7,7 +7,7 @@
 </div>
 
 <div align="center">
-  <a href="">Habr</a> | <a href=>Project Page</a> | Technical Report (soon) | <a href=> Models🤗 (soon) </a>
+  <a href="">Habr</a> | <a href=>Project Page</a> | Technical Report (soon) | <a href=https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5> Models🤗 </a>
 </div>
 
 <h1>Kandinsky 5.0 Video: A family of diffusion models for Video generation</h1>
@@ -36,8 +36,6 @@ We provide 8 model variants, each optimized for different use cases:
 
 All models are available in two versions: for generating 5-second and 10-second videos.
 
-https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
-
 ## Model Zoo
 
 | Model                               | config | video duration | NFE | Checkpoint | Latency (H100) | VBench score |
@@ -51,8 +49,18 @@ https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 | Kandinsky 5.0 T2V Lite distill 5s   |        | 5s             | 16  | 🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
 | Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
 
-### Reesults: 
+### Reesults:
+
+#### Side-by-Side evaluation
 TODO: add SBS
+
+#### VBench results
+
+<div align="center">
+  <picture>
+    <img src="assets/vbench.png">
+  </picture>
+</div>
 
 ## Quickstart
 
