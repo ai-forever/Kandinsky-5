@@ -1,0 +1,54 @@
+metrics:
+  scheduler_scale: 5
+  scale_factor:
+  - 1.0
+  - 2.0
+  - 2.0
+  resolution: 512
+model:
+  checkpoint_path: "./weights/model/kandinsky5lite_t2v_pretrain_10s.safetensors"
+  num_steps: 50
+  guidance_weight: 5.0
+  dit_params:
+    in_visual_dim: 16
+    out_visual_dim: 16
+    time_dim: 512
+    patch_size:
+    - 1
+    - 2
+    - 2
+    model_dim: 1792
+    ff_dim: 7168
+    num_text_blocks: 2
+    num_visual_blocks: 32
+    axes_dims:
+    - 16
+    - 24
+    - 24
+    visual_cond: true
+    in_text_dim: 3584
+    in_text_dim2: 768
+  attention:
+    type: nabla
+    causal: false
+    local: false
+    glob: false
+    window: 3
+    P: 0.9
+    wT: 11
+    wW: 3
+    wH: 3
+    add_sta: true
+    method: topcdf
+  vae:
+    checkpoint_path: "./weights/vae/"
+    name: "hunyuan"
+  text_embedder:
+    qwen: 
+      emb_size: 3584
+      checkpoint_path: "./weights/text_encoder/"
+      max_length: 256
+    clip:
+      checkpoint_path: "./weights/text_encoder2/"
+      emb_size: 768
+      max_length: 77

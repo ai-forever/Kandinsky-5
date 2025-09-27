@@ -1,15 +1,59 @@
-from huggingface_hub import hf_hub_download, snapshot_download
 import os
+
+from huggingface_hub import snapshot_download
+
 
 if __name__ == "__main__":
 
     cache_dir = "./weights"
     
     dit_path = snapshot_download(
-        repo_id="ai-forever/kandinsky-5",
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s",
         allow_patterns="model/*",
         local_dir=cache_dir,
     )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-5s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-10s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    dit_path = snapshot_download(
+        repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s",
+        allow_patterns="model/*",
+        local_dir=cache_dir,
+    )
+
+    # dit_path = snapshot_download(
+    #     repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-10s",
+    #     allow_patterns="model/*",
+    #     local_dir=cache_dir,
+    # )
     
     vae_path = snapshot_download(
         repo_id="hunyuanvideo-community/HunyuanVideo",

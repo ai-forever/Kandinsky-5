@@ -7,67 +7,199 @@
 </div>
 
 <div align="center">
-  <a href="">Article</a> | <a href=>Project Page</a> |Technical Report (soon) | <a href=> Models🤗 (soon) </a>
+  <a href="">Habr</a> | <a href=>Project Page</a> | Technical Report (soon) | <a href=https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5> Models🤗 </a>
 </div>
 
-<h1>Kandinsky 5.0 Video Lite: A family of diffusion models for Video generation</h1>
+<h1>Kandinsky 5.0: A family of diffusion models for Video & Image generation</h1>
 
-In this repository, we provide a family of diffusion models to generate a video given a textual prompt or an image (<em>Coming Soon</em>) and distilled model for a faster generation.
+In this repository, we provide a family of diffusion models to generate a video or an image (<em>Coming Soon</em>) given a textual prompt and distilled model for a faster generation.
+
+https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 
 ## Project Updates
 
 - 🔥 **Source**: ```2025/09/29```: We have open-sourced `Kandinsky 5.0 T2V Lite` a lite (2B parameters) version of `Kandinsky 5.0 Video` text-to-video generation model. Released checkpoints: `lite_pretrain_5s`, `lite_pretrain_10s`, `lite_sft_5s`, `lite_sft_10s`, `lite_nocfg_5s`, `lite_nocfg_10s`, `lite_distil_5s`, `lite_distil_10s` contains weight from pretrain, supervised finetuning, cfg distillation and distillation in 16 steps. 5s checkpoints are capable of generating videos up to 5 seconds long. 10s checkpoints is faster models checkpoints trained with [NABLA](https://huggingface.co/ai-forever/Wan2.1-T2V-14B-NABLA-0.7) algorithm and capable to generate videos up to 10 seconds long.
 
-## Table of contents
-<ul>
-  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V Lite</a>: Lite text-to-video model </em></li>
-  <li><a href="#kandinsky-50-t2v">Kandinsky 5.0 T2V Pro</a>: Pro text-to-video model - <em>Coming Soon</em></li>
-  <li><a href="#kandinsky-50-i2v-image-to-video">Kandinsky 5.0 I2V Lite</a>: A lite image-to-video model - <em>Coming Soon</em> </li>
-  <li><a href="#kandinsky-50-i2v-image-to-video">Kandinsky 5.0 I2V Pro</a>: A pro image-to-video model - <em>Coming Soon</em> </li>
-</ul>
-
-
 ## Kandinsky 5.0 T2V Lite
 
-Kandinsky 5.0 T2V Lite — top 1 video generation model among open source in its class (small and lightweight model with 2B parameters, better than the Wan 5B, 14B), top 1 in knowledge of Russian concepts in open source.
+Kandinsky 5.0 T2V Lite is a lightweight video generation model (2B parameters) that ranks #1 among open-source models in its class. It outperforms larger Wan models (5B and 14B) and offers the best understanding of Russian concepts in the open-source ecosystem.
 
-https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
+We provide 8 model variants, each optimized for different use cases:
 
+* SFT model — delivers the highest generation quality;
 
-### Reesults: 
-TODO: add SBS
+* CFG-distilled — runs 2× faster;
+
+* Diffusion-distilled — enables low-latency generation with minimal quality loss;
+
+* Pretrain model — designed for fine-tuning by researchers and enthusiasts.
+
+All models are available in two versions: for generating 5-second and 10-second videos.
+
+## Model Zoo
+
+| Model                               | config | video duration | NFE | Checkpoint | Latency* (H100) | VBench score |
+|-------------------------------------|--------|----------------|-----|------------|----------------|--------------|
+| Kandinsky 5.0 T2V Lite SFT 5s       |configs/config_5s_sft.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s) |      139 s     |     84.02    |
+| Kandinsky 5.0 T2V Lite SFT 10s      |configs/config_10s_sft.yaml| 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s) |      224 s     |     85.36    |
+| Kandinsky 5.0 T2V Lite pretrain 5s  |configs/config_5s_pretrain.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s) |      139 s      |              |
+| Kandinsky 5.0 T2V Lite pretrain 10s |configs/config_10s_pretrain.yaml | 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s) |     224 s      |              |
+| Kandinsky 5.0 T2V Lite no-CFG 5s    |configs/config_5s_nocfg.yaml| 5s             | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-5s) |                |              |
+| Kandinsky 5.0 T2V Lite no-CFG 10s   |configs/config_10s_nocfg.yaml| 10s            | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-10s) |                |              |
+| Kandinsky 5.0 T2V Lite distill 5s   |configs/config_5s_distil.yaml| 5s             | 16  | 🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
+| Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
+
+*Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process.
 
 ### Examples:
 
+#### Kandinsky 5.0 T2V Lite SFT
+
 <table border="0" style="width: 200; text-align: left; margin-top: 20px;">
-  <!-- <tr>
+  <tr>
       <td>
-          <video src="https://github.com/user-attachments/assets/d5a0c11e-020b-4e56-9a17-5b3995890908" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/bc38821b-f9f1-46db-885f-1f70464669eb" width=200 controls autoplay loop></video>
       </td>
       <td>
-          <video src="https://github.com/user-attachments/assets/98ba32be-96c7-4d6c-8ffa-3cf77710581a" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/9f64c940-4df8-4c51-bd81-a05de8e70fc3" width=200 controls autoplay loop></video>
       </td>
   <tr>
       <td>
-          <video src="https://github.com/user-attachments/assets/140b64ae-9c34-4763-98a6-4c7408be3a4e" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/77dd417f-e0bf-42bd-8d80-daffcd054add" width=200 controls autoplay loop></video>
       </td>
       <td>
-          <video src="https://github.com/user-attachments/assets/d3eab231-d7e8-4f0a-9829-2b066ad8301d" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/385a0076-f01c-4663-aa46-6ce50352b9ed" width=200 controls autoplay loop></video>
       </td>
   <tr>
       <td>
-          <video src="https://github.com/user-attachments/assets/f955f0e0-7141-4413-aa1e-11827c108f83" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/7c1bcb31-cc7d-4385-9a33-2b0cc28393dd" width=200 controls autoplay loop></video>
       </td>
       <td>
-          <video src="https://github.com/user-attachments/assets/4eb10e1d-60a0-4ff9-ad7e-9b5ab0a0fff8" width=200 controls autoplay loop></video>
+          <video src="https://github.com/user-attachments/assets/990a8a0b-2df1-4bbc-b2e3-2859b6f1eea6" width=200 controls autoplay loop></video>
       </td>
-  </tr> -->
+  </tr>
 
 </table>
 
-### Load Models
 
-```python download_models.py```
+#### Kandinsky 5.0 T2V Lite Distill
+
+<table border="0" style="width: 200; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/861342f9-f576-4083-8a3b-94570a970d58" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/302e4e7d-781d-4a58-9b10-8c473d469c4b" width=200 controls autoplay loop></video>
+      </td>
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/3e70175c-40e5-4aec-b506-38006fe91a76" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/b7da85f7-8b62-4d46-9460-7f0e505de810" width=200 controls autoplay loop></video>
+      </td>
+
+</table>
+
+### Results:
+
+#### Side-by-Side evaluation
+
+The evaluation is based on the expanded prompts from the [Movie Gen benchmark](https://github.com/facebookresearch/MovieGenBench), which are available in the expanded_prompt column of the benchmark/moviegen_bench.csv file.
+
+<table border="0" style="width: 400; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_sora.jpg" width=400 ></img>
+      </td>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.1_14B.jpg" width=400 ></img>
+      </td>
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.2_5B.jpg" width=400 ></img>
+      </td>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.2_A14B.jpg" width=400 ></img>
+      </td>
+
+</table>
+
+#### VBench results
+
+<div align="center">
+  <picture>
+    <img src="assets/vbench.png">
+  </picture>
+</div>
+
+## Quickstart
+
+#### Installation
+Clone the repo:
+```sh
+git clone TODO add actual repo
+cd TODO add actual repo name
+```
+
+Install dependencies: # TODO add requirements.txt
+```sh
+pip install -r requirements.txt
+```
+
+#### Model Download
+```sh
+python download_models.py
+```
+
+#### Run Kandinsky 5.0 T2V Lite SFT 5s
+
+```sh
+python test.py --prompt "A dog in red hat"
+```
+
+#### Run Kandinsky 5.0 T2V Lite SFT 10s 
+
+```sh
+python test.py --config ./configs/config_10s_sft.yaml --prompt "A dog in red hat" --video_duration 10 
+```
+
+#### Run Kandinsky 5.0 T2V Lite pretrain 5s
+
+```sh
+python test.py --config ./configs/config_5s_pretrain.yaml --prompt "A dog in red hat"
+```
+
+#### Run Kandinsky 5.0 T2V Lite pretrain 10s
+
+```sh
+python test.py --config ./configs/config_10s_pretrain.yaml --prompt "A dog in red hat" --video_duration 10
+```
+
+#### Run Kandinsky 5.0 T2V Lite no-CFG 5s
+
+```sh
+python test.py --config ./configs/config_5s_nocfg.yaml --prompt "A dog in red hat" 
+```
+
+#### Run Kandinsky 5.0 T2V Lite no-CFG 10s
+
+```sh
+python test.py --config ./configs/config_10s_nocfg.yaml --prompt "A dog in red hat" --video_duration 10
+```
+
+#### Run Kandinsky 5.0 T2V Lite distill 5s
+
+```sh
+python test.py --config ./configs/config_5s_distil.yaml --prompt "A dog in red hat"          
+```
+
+#### Run Kandinsky 5.0 T2V Lite distill 10s
+
+```sh
+TODO: add example
+```
 
 ### Inference
 
@@ -82,7 +214,7 @@ device_map = {
     "text_embedder": torch.device('cuda:0')
 }
 
-pipe = get_T2V_pipeline(device_map)
+pipe = get_T2V_pipeline(device_map, conf_path="configs/config_5s_sft.yaml")
 
 images = pipe(
     seed=42,
@@ -103,7 +235,7 @@ Please, refer to [inference_example.ipynb](inference_example.ipynb) notebook for
 For a faster inference, we also provide the capability to perform inference in a distributed way:
 ```
 NUMBER_OF_NODES=1
-NUMBER_OF_DEVICES_PER_NODE=2 or 4
+NUMBER_OF_DEVICES_PER_NODE=1 / 2 / 4
 python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $NUMBER_OF_DEVICES_PER_NODE test.py
 ```
 
@@ -114,50 +246,27 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
       - [x]  pretrain
       - [x] sft
       - [ ] rl
-      - [ ] cfg distil 
+      - [x] cfg distil 
       - [x] distil 16 steps
-    - [ ] ComfyUI integration
+      - [ ] autoregressive generation
+    - [x] ComfyUI integration
     - [ ] Diffusers integration
+    - [ ] Caching acceleration support
 - Kandinsky 5.0 Lite Image-to-Video
     - [ ] Multi-GPU Inference code of the 2B model
     - [ ] Checkpoints of the 2B model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Text-to-Video
-    - [ ] Multi-GPU Inference code of the 2B models
-    - [ ] Checkpoints 2B models
+    - [ ] Multi-GPU Inference code of the models
+    - [ ] Checkpoints of the model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Image-to-Video
-    - [ ] Multi-GPU Inference code of the 2B model
-    - [ ] Checkpoints of the 2B model
+    - [ ] Multi-GPU Inference code of the model
+    - [ ] Checkpoints of the model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
-
- 
-## Quickstart
-
-#### Installation
-Clone the repo:
-```sh
-git clone TODO add actual repo
-cd TODO add actual repo name
-```
-
-Install dependencies: # TODO add requirements.txt
-```sh
-pip install -r requirements.txt
-```
-
-#### Model Download
-```sh
-python download_models.py
-```
-
-#### Run Test Example
-```sh
-python test.py --width 768 --height 512 --prompt "A dog in red hat"
-```
 
 # Authors
 <B>Project Leader:</B> Denis Dimitrov</br>

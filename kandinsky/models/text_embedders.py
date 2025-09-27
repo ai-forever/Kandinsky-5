@@ -55,13 +55,13 @@ class Qwen2_5_VLTextEmbedder:
     def __init__(self, conf, device):
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             conf.checkpoint_path,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
             device_map=device,
         )
         self.model = freeze(self.model)
         self.model = torch.compile(self.model, dynamic=True)
-        self.processor = AutoProcessor.from_pretrained(conf.checkpoint_path)
+        self.processor = AutoProcessor.from_pretrained(conf.checkpoint_path, use_fast=True)
         self.max_length = conf.max_length
 
     def __call__(self, texts, type_of_content="video"):
