@@ -68,13 +68,13 @@ def parse_args():
     parser.add_argument(
         "--sample_steps",
         type=int,
-        default=50,
+        default=None,
         help="The sampling steps number."
     )
     parser.add_argument(
         "--guidance_weight",
         type=float,
-        default=5.0,
+        default=None,
         help="Guidance weight."
     )
     parser.add_argument(
