@@ -163,7 +163,7 @@ Please, refer to [inference_example.ipynb](inference_example.ipynb) notebook for
 For a faster inference, we also provide the capability to perform inference in a distributed way:
 ```
 NUMBER_OF_NODES=1
-NUMBER_OF_DEVICES_PER_NODE=2 or 4
+NUMBER_OF_DEVICES_PER_NODE=1 / 2 / 4
 python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $NUMBER_OF_DEVICES_PER_NODE test.py
 ```
 
@@ -185,13 +185,13 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Text-to-Video
-    - [ ] Multi-GPU Inference code of the 2B models
-    - [ ] Checkpoints 2B models
+    - [ ] Multi-GPU Inference code of the models
+    - [ ] Checkpoints of the model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 - Kandinsky 5.0 Pro Image-to-Video
-    - [ ] Multi-GPU Inference code of the 2B model
-    - [ ] Checkpoints of the 2B model
+    - [ ] Multi-GPU Inference code of the model
+    - [ ] Checkpoints of the model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
 
