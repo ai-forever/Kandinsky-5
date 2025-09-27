@@ -84,43 +84,43 @@ python download_models.py
 #### Run Kandinsky 5.0 T2V Lite SFT 5s
 
 ```sh
-python test.py --width 768 --height 512 --prompt "A dog in red hat"
+python test.py --prompt "A dog in red hat"
 ```
 
 #### Run Kandinsky 5.0 T2V Lite SFT 10s 
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_10s_sft.yaml --prompt "A dog in red hat" --video_duration 10 
 ```
 
 #### Run Kandinsky 5.0 T2V Lite pretrain 5s
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_5s_pretrain.yaml --prompt "A dog in red hat"
 ```
 
 #### Run Kandinsky 5.0 T2V Lite pretrain 10s
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_10s_pretrain.yaml --prompt "A dog in red hat" --video_duration 10
 ```
 
 #### Run Kandinsky 5.0 T2V Lite no-CFG 5s
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_5s_nocfg.yaml --prompt "A dog in red hat" 
 ```
 
 #### Run Kandinsky 5.0 T2V Lite no-CFG 10s
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_10s_nocfg.yaml --prompt "A dog in red hat" --video_duration 10
 ```
 
 #### Run Kandinsky 5.0 T2V Lite distill 5s
 
 ```sh
-TODO: add example
+python test.py --config ./configs/config_5s_distil.yaml --prompt "A dog in red hat"          
 ```
 
 #### Run Kandinsky 5.0 T2V Lite distill 10s
