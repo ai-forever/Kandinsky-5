@@ -17,9 +17,10 @@ class Kandinsky5T2VPipeline:
         text_embedder,
         vae,
         resolution: int = 512,
-        local_dit_rank=0,
-        world_size=1,
-        conf=None,
+        local_dit_rank: int = 0,
+        world_size: int = 1,
+        conf = None,
+        offload: bool = False,
     ):
         if resolution not in [512]:
             raise ValueError("Resolution can be only 512")
@@ -34,6 +35,10 @@ class Kandinsky5T2VPipeline:
         self.local_dit_rank = local_dit_rank
         self.world_size = world_size
         self.conf = conf
+        self.num_steps = conf.model.num_steps
+        self.guidance_weight = conf.model.guidance_weight
+
+        self.offload = offload
 
         self.RESOLUTIONS = {
             512: [(512, 512), (512, 768), (768, 512)],
@@ -84,19 +89,21 @@ class Kandinsky5T2VPipeline:
 
     def __call__(
         self,
-        text: Union[str, List[str]],
+        text: str,
         time_length: int = 5,  # time in seconds 0 if you want generate image
         width: int = 768,
         height: int = 512,
         seed: int = None,
-        num_steps: int = 50,
-        guidance_weight: float = 5.0,
+        num_steps: int = None,
+        guidance_weight: float = None,
         scheduler_scale: float = 10.0,
         negative_caption: str = "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards",
         expand_prompts: bool = True,
-        save_path: Union[str, List[str]] = None,
+        save_path: str = None,
         progress: bool = True,
     ):
+        num_steps = self.num_steps if num_steps is None else num_steps
+        guidance_weight = self.guidance_weight if guidance_weight is None else guidance_weight
         # SEED
         if seed is None:
             if self.local_dit_rank == 0:
@@ -120,23 +127,25 @@ class Kandinsky5T2VPipeline:
         # PREPARATION
         num_frames = 1 if time_length == 0 else time_length * 24 // 4 + 1
 
-        if isinstance(text, str):
-            captions = [text]
-        else:
-            captions = text
+        caption = text
         if expand_prompts:
             if self.local_dit_rank == 0:
-                captions = [self.expand_prompt(x) for x in captions]
+                if self.offload:
+                    self.text_embedder = self.text_embedder.to(self.device_map["text_embedder"])
+                caption = self.expand_prompt(caption)
+                if self.offload:
+                    self.text_embedder = self.text_embedder.to("cpu")
             if self.world_size > 1:
-                torch.distributed.broadcast_object_list(captions, 0)
+                caption = [caption]
+                torch.distributed.broadcast_object_list(caption, 0)
+                caption = caption[0]
 
-        bs = len(captions)
-        shape = (bs, num_frames, height // 8, width // 8, 16)
+        shape = (1, num_frames, height // 8, width // 8, 16)
 
         # GENERATION
         images = generate_sample(
             shape,
-            captions,
+            caption,
             self.dit,
             self.vae,
             self.conf,
@@ -148,7 +157,9 @@ class Kandinsky5T2VPipeline:
             seed=seed,
             device=self.device_map["dit"],
             vae_device=self.device_map["vae"],
-            progress=progress
+            text_embedder_device=self.device_map["text_embedder"],
+            progress=progress,
+            offload=self.offload
         )
         torch.cuda.empty_cache()
 

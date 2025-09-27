@@ -61,7 +61,7 @@ class Qwen2_5_VLTextEmbedder:
         )
         self.model = freeze(self.model)
         self.model = torch.compile(self.model, dynamic=True)
-        self.processor = AutoProcessor.from_pretrained(conf.checkpoint_path)
+        self.processor = AutoProcessor.from_pretrained(conf.checkpoint_path, use_fast=True)
         self.max_length = conf.max_length
 
     def __call__(self, texts, type_of_content="video"):

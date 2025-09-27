@@ -5,7 +5,9 @@ metrics:
   - 2.0
   resolution: 512
 model:
-  checkpoint_path: "./weights/model/lite_sft_5s.safetensors"
+  checkpoint_path: "./weights/model/kandinsky5lite_t2v_sft_5s.safetensors"
+  num_steps: 50
+  guidance_weight: 5.0
   dit_params:
     in_visual_dim: 16
     out_visual_dim: 16
