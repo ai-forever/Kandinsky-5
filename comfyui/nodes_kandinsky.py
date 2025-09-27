@@ -62,17 +62,7 @@ class Kandinsky5LoadDiT:
         dit = get_dit(conf.model.dit_params)
         dit = dit.to(device=device)
         state_dict = load_file(dit_path)
-        new_state_dict = {}
-        for key in state_dict:
-            new_key = key
-            if 'out_layer' in key:
-                if 'cross_attention' in key:
-                    new_key = key.replace('cross_attention.out_layer', 'out_layer_cross')
-                elif 'self_attention' in key:
-                    new_key = key.replace('self_attention.out_layer', 'out_layer_self')
-            new_state_dict[new_key] = state_dict[key]
-        del state_dict
-        dit.load_state_dict(new_state_dict)
+        dit.load_state_dict(state_dict)
         return (dit,conf)
 class Kandinsky5TextEncode(ComfyNodeABC):
     @classmethod
@@ -219,10 +209,10 @@ class Kandinsky5Generate(ComfyNodeABC):
         text_embed = {"text_embeds": bs_text_embed, "pooled_embed": positive_clip }
         null_embed = {"text_embeds": bs_null_text_embed, "pooled_embed": negative_clip }
 
-        visual_cu_seqlens = length * torch.arange(bs + 1, dtype=torch.int32, device=device)
         visual_rope_pos = [
-            torch.cat([torch.arange(end) for end in torch.diff(visual_cu_seqlens).cpu()]),
-            torch.arange(height // patch_size[1]), torch.arange(width // patch_size[2])
+            torch.arange(length // patch_size[0]),
+            torch.arange(height // patch_size[1]),
+            torch.arange(width // patch_size[2])
         ]
         text_rope_pos = torch.cat([torch.arange(end) for end in torch.diff(text_cu_seqlens).cpu()])
         null_text_rope_pos = torch.cat([torch.arange(end) for end in torch.diff(null_text_cu_seqlens).cpu()])
@@ -230,8 +220,7 @@ class Kandinsky5Generate(ComfyNodeABC):
             with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
                 latent_visual = generate(
                     model, device, (bs * length, height, width, dim), steps, 
-                    text_embed, null_embed, 
-                    visual_cu_seqlens, text_cu_seqlens, null_text_cu_seqlens,
+                    text_embed, null_embed,
                     visual_rope_pos, text_rope_pos, null_text_rope_pos,
                     cfg, scheduler_scale, config 
                 )

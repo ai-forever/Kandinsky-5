@@ -64,7 +64,7 @@ After loading the workflow, configure the following parameters:
 |-----------|-------------|-------------------|
 | **Prompt** | Text description for video generation | Your descriptive text |
 | **Negative Prompt** | What to exclude from generation | Unwanted elements description |
-| **Width/Height/Length** | Output video size | 768x512x121 for 5s or 768x512x241 for 10s |
-| **Steps** | Number of generation steps | 50, 16 for distill |
+| **Width/Height/Length** | Output video size | 768x512x121 for 5s or 768x512x241 for 10s, Width and Height should be divisisble  by 128 for 10s model |
+| **Steps** | Number of generation steps | 50, 16 for distilled version|
 | **CFG Scale** |  | 5.0 |
 | **Scheduler Scale** | Noise scheduler scale | 5.0 for 5s, 10.0 for 10s |
