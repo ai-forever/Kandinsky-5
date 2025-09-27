@@ -5,7 +5,7 @@ metrics:
   - 2.0
   resolution: 512
 model:
-  checkpoint_path: "./weights/model/lite_distil_5s.safetensors"
+  checkpoint_path: "./weights/model/kandinsky5lite_t2v_distilled16steps_5s.safetensors"
   num_steps: 16
   guidance_weight: 1.0
   dit_params:
