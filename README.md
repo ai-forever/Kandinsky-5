@@ -106,6 +106,8 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 #### Side-by-Side evaluation
 
+The evaluation is based on the expanded prompts from the [Movie Gen benchmark](https://github.com/facebookresearch/MovieGenBench), which are available in the expanded_prompt column of the benchmark/moviegen_bench.csv file.
+
 <table border="0" style="width: 400; text-align: left; margin-top: 20px;">
   <tr>
       <td>
