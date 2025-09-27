@@ -51,6 +51,69 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 *Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process.
 
+### Examples:
+
+#### Kandinsky 5.0 T2V Lite SFT
+
+<table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-spacing: 0;">
+  <tr>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/1.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/2.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/3.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/4.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/5.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/sft/6.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+  </tr>
+</table>
+
+#### Kandinsky 5.0 T2V Lite Distill
+
+<table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-spacing: 0;">
+  <tr>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/distill/1.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/distill/2.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+    <td style="padding: 0; margin: 0; line-height: 0;">
+      <video width="384" height="256" controls>
+        <source src="assets/generation_examples/distill/3.mp4" autoplay loop muted playsinline type="video/mp4">
+      </video>
+    </td>
+  </tr>
+</table>
+
 ### Results:
 
 #### Side-by-Side evaluation
