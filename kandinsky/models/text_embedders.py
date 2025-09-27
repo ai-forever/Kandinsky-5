@@ -55,7 +55,7 @@ class Qwen2_5_VLTextEmbedder:
     def __init__(self, conf, device):
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             conf.checkpoint_path,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
             device_map=device,
         )

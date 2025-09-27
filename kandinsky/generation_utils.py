@@ -152,10 +152,6 @@ def generate_sample(
         type_of_content = "image"
     else:
         type_of_content = "video"
-
-
-    if offload:
-        text_embedder = text_embedder.to(text_embedder_device)
         
     with torch.no_grad():
         bs_text_embed, text_cu_seqlens = text_embedder.encode(

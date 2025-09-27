@@ -54,7 +54,7 @@ def get_T2V_pipeline(
 
     if dit_path is None and conf_path is None:
         dit_path = snapshot_download(
-            repo_id="ai-forever/kandinsky-5",
+            repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s",
             allow_patterns="model/*",
             local_dir=cache_dir,
         )
@@ -102,7 +102,7 @@ def get_T2V_pipeline(
     state_dict = load_file(conf.model.checkpoint_path)
 
 
-    dit.load_state_dict(state_dict)
+    dit.load_state_dict(state_dict, assign=True)
     if not offload:
         dit = dit.to(device_map["dit"])
 
@@ -176,6 +176,8 @@ def get_default_conf(
             "text_embedder": text_embedder,
             "dit_params": dit_params,
             "attention": attention,
+            "num_steps": 50,
+            "guidance_weight": 5.0,
         },
         "metrics": {"scale_factor": (1, 2, 2)},
         "resolution": 512,

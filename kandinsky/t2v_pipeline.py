@@ -133,8 +133,6 @@ class Kandinsky5T2VPipeline:
                 if self.offload:
                     self.text_embedder = self.text_embedder.to(self.device_map["text_embedder"])
                 caption = self.expand_prompt(caption)
-                if self.offload:
-                    self.text_embedder = self.text_embedder.to("cpu")
             if self.world_size > 1:
                 caption = [caption]
                 torch.distributed.broadcast_object_list(caption, 0)
