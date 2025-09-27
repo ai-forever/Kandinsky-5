@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from typing import Optional, Union
 import torch
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
@@ -54,7 +55,7 @@ def get_T2V_pipeline(
 
     if dit_path is None and conf_path is None:
         dit_path = snapshot_download(
-            repo_id="ai-forever/kandinsky-5",
+            repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s",
             allow_patterns="model/*",
             local_dir=cache_dir,
         )
@@ -99,19 +100,18 @@ def get_T2V_pipeline(
         vae = vae.to(device=device_map["vae"]) 
 
     dit = get_dit(conf.model.dit_params)
-    state_dict = load_file(conf.model.checkpoint_path)
-
-
-    dit.load_state_dict(state_dict)
-    if not offload:
-        dit = dit.to(device_map["dit"])
-
-    if world_size > 1:
-        dit = parallelize_dit(dit, device_mesh["tensor_parallel"])
+    dits = {}
+    for key, ckpt_path in conf.model.checkpoint_paths.items():
+        dits[key] = deepcopy(dit)
+        state_dict = load_file(ckpt_path)
+        dits[key].load_state_dict(state_dict, assign=True)
+        if not offload:
+            dits[key] = dits[key].to(device_map["dit"])
+    del dit
 
     return Kandinsky5T2VPipeline(
         device_map=device_map,
-        dit=dit,
+        dits=dits,
         text_embedder=text_embedder,
         vae=vae,
         resolution=resolution,

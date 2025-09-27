@@ -13,7 +13,7 @@ class Kandinsky5T2VPipeline:
         device_map: Union[
             str, torch.device, dict
         ],  # {"dit": cuda:0, "vae": cuda:1, "text_embedder": cuda:1 }
-        dit,
+        dits,
         text_embedder,
         vae,
         resolution: int = 512,
@@ -25,7 +25,7 @@ class Kandinsky5T2VPipeline:
         if resolution not in [512]:
             raise ValueError("Resolution can be only 512")
 
-        self.dit = dit
+        self.dits = dits
         self.text_embedder = text_embedder
         self.vae = vae
 
@@ -90,20 +90,25 @@ class Kandinsky5T2VPipeline:
     def __call__(
         self,
         text: str,
+        mode: str = "sft",
         time_length: int = 5,  # time in seconds 0 if you want generate image
         width: int = 768,
         height: int = 512,
         seed: int = None,
         num_steps: int = None,
         guidance_weight: float = None,
-        scheduler_scale: float = 10.0,
+        scheduler_scale: float = 5.0,
         negative_caption: str = "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards",
         expand_prompts: bool = True,
         save_path: str = None,
         progress: bool = True,
     ):
-        num_steps = self.num_steps if num_steps is None else num_steps
-        guidance_weight = self.guidance_weight if guidance_weight is None else guidance_weight
+        default_num_steps = 50 if mode == "sft" else 16
+        default_guidance_weight = 5.0 if mode == "sft" else 1.0
+        num_steps = default_num_steps if num_steps is None else num_steps
+        guidance_weight = default_guidance_weight if guidance_weight is None else guidance_weight
+        key = f"{mode}_{time_length}s"
+        dit = self.dits[key]
         # SEED
         if seed is None:
             if self.local_dit_rank == 0:
@@ -146,7 +151,7 @@ class Kandinsky5T2VPipeline:
         images = generate_sample(
             shape,
             caption,
-            self.dit,
+            dit,
             self.vae,
             self.conf,
             text_embedder=self.text_embedder,

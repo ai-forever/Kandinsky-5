@@ -1,3 +1,4 @@
+from numpy import dtype
 import torch
 from transformers import (
     Qwen2_5_VLForConditionalGeneration,
@@ -13,7 +14,7 @@ class ClipTextEmbedder:
     def __init__(self, conf, device):
         self.model = CLIPTextModel.from_pretrained(conf.checkpoint_path).to(device)
         self.model = freeze(self.model)
-        self.tokenizer = CLIPTokenizer.from_pretrained(conf.checkpoint_path)
+        self.tokenizer = CLIPTokenizer.from_pretrained(conf.checkpoint_path, dtype=torch.bfloat16)
         self.max_length = conf.max_length
 
     def __call__(self, texts):
