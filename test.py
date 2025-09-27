@@ -86,7 +86,7 @@ def parse_args():
     parser.add_argument(
         "--output_filename",
         type=str,
-        default=None,
+        default="./test.mp4",
         help="Name of the resulting file"
     )
 
