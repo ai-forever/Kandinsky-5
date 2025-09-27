@@ -1,289 +1,22 @@
 {
+  "id": "12380645-f2b5-4537-88ad-dd959a44e47c",
+  "revision": 0,
   "last_node_id": 77,
-  "last_link_id": 162,
+  "last_link_id": 163,
   "nodes": [
-    {
-      "id": 70,
-      "type": "ShowText",
-      "pos": [
-        -835.82275390625,
-        471.0197448730469
-      ],
-      "size": [
-        391.5,
-        237.22247314453125
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "widget": {
-            "name": "text"
-          },
-          "link": 133
-        }
-      ],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "shape": 6,
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-show-text",
-        "ver": "b5e6f55fc69516f2c20553b516e9ace8ff7d8987",
-        "Node name for S&R": "ShowText",
-        "aux_id": "fairy-root/ComfyUI-Show-Text"
-      },
-      "widgets_values": [
-        "",
-        "In a gripping and cinematic sequence, a heavily armored military tank, its steel-gray hull adorned with bold white lettering reading \"SBER,\" charges forward with a powerful and dramatic impact. The tank's imposing presence is accentuated by its robust design and the authoritative stance it projects as it moves towards its target.\n\nThe tank approaches a sleek, modern office building, distinguished by a glowing neon sign that reads \"OpenAI\" in vibrant blue and green hues, symbolizing innovation and cutting-edge technology. As the tank nears the building, the tension builds, and the anticipation reaches a peak.\n\nWith a thunderous crash, the tank smashes through a reinforced glass wall, sending shards of glass and debris flying into the air. The impact is so forceful that it sends shockwaves through the surrounding area, creating a chaotic and visually striking scene. The camera captures this moment from multiple angles, emphasizing the sheer power and destructive force of the tank.\n\nInside the building, the artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. Debris and shattered glass litter the floor, and the sound of metal crunching and glass breaking echoes through the space. The camera follows the tank's movement, highlighting the chaos and disarray it leaves behind"
-      ]
-    },
-    {
-      "id": 68,
-      "type": "expand_prompt",
-      "pos": [
-        -284.2915954589844,
-        -115.96104431152344
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 139
-        }
-      ],
-      "outputs": [
-        {
-          "name": "exp_prompt",
-          "type": "PROMPT",
-          "links": [],
-          "slot_index": 0
-        },
-        {
-          "name": "log",
-          "type": "STRING",
-          "links": [
-            133
-          ],
-          "slot_index": 1
-        }
-      ],
-      "properties": {
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8",
-        "Node name for S&R": "expand_prompt"
-      },
-      "widgets_values": [
-        "A heavily armored military tank, with bold white lettering reading \"SBER\" painted on its steel-gray hull, charges forward with a powerful and dramatic impact. It approaches a sleek, modern office building featuring a glowing neon sign that reads \"OpenAI\" in bright blue and green hues. The tank smashes through a reinforced glass wall with a thunderous crash, sending shards of glass and debris flying. Inside the building, artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. The camera follows the action with dynamic, fast-paced shots, capturing the force of the impact and the chaos unfolding. The visual style is intense and cinematic, with dramatic lighting contrasts and a high-impact, high-stakes atmosphere, emphasizing the collision between two powerful entities.'"
-      ]
-    },
-    {
-      "id": 71,
-      "type": "Kandinsky5LoadTextEmbedders",
-      "pos": [
-        -914.0863647460938,
-        -140.99302673339844
-      ],
-      "size": [
-        340.20001220703125,
-        82
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            138,
-            139,
-            143,
-            147
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5LoadTextEmbedders"
-      },
-      "widgets_values": [
-        "qwen2_5_vl_7b_instruct",
-        "clip_text"
-      ]
-    },
-    {
-      "id": 73,
-      "type": "Kandinsky5TextEncode",
-      "pos": [
-        39.00349426269531,
-        790.864501953125
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 147
-        },
-        {
-          "name": "extended_text",
-          "type": "PROMPT",
-          "shape": 7,
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "TEXT",
-          "type": "CONDITION",
-          "links": [
-            159
-          ],
-          "slot_index": 0
-        },
-        {
-          "name": "POOLED",
-          "type": "CONDITION",
-          "links": [
-            158
-          ],
-          "slot_index": 1
-        }
-      ],
-      "properties": {
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5TextEncode"
-      },
-      "widgets_values": [
-        "bad, static"
-      ]
-    },
-    {
-      "id": 72,
-      "type": "Kandinsky5TextEncode",
-      "pos": [
-        -94.78922271728516,
-        288.76806640625
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 143
-        },
-        {
-          "name": "extended_text",
-          "type": "PROMPT",
-          "shape": 7,
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "TEXT",
-          "type": "CONDITION",
-          "links": [
-            161
-          ],
-          "slot_index": 0
-        },
-        {
-          "name": "POOLED",
-          "type": "CONDITION",
-          "links": [
-            160
-          ],
-          "slot_index": 1
-        }
-      ],
-      "properties": {
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5TextEncode"
-      },
-      "widgets_values": [
-        "A heavily armored military tank, with bold white lettering reading \"SBER\" painted on its steel-gray hull, charges forward with a powerful and dramatic impact. It approaches a sleek, modern office building featuring a glowing neon sign that reads \"OpenAI\" in bright blue and green hues. The tank smashes through a reinforced glass wall with a thunderous crash, sending shards of glass and debris flying. Inside the building, artificial lighting flickers as the tank barrels through the interior, leaving a trail of destruction in its wake. The camera follows the action with dynamic, fast-paced shots, capturing the force of the impact and the chaos unfolding. The visual style is intense and cinematic, with dramatic lighting contrasts and a high-impact, high-stakes atmosphere, emphasizing the collision between two powerful entities.'"
-      ]
-    },
-    {
-      "id": 76,
-      "type": "Kandinsky5LoadVAE",
-      "pos": [
-        570.6658325195312,
-        -181.69422912597656
-      ],
-      "size": [
-        315,
-        58
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            155
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5LoadVAE"
-      },
-      "widgets_values": [
-        "hunyuan_vae"
-      ]
-    },
     {
       "id": 77,
       "type": "Kandinsky5VAEDecode",
       "pos": [
-        1128.1783447265625,
-        -202.5648651123047
+        635.5618896484375,
+        529.5596313476562
       ],
       "size": [
         239.40000915527344,
         46
       ],
       "flags": {},
-      "order": 8,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -301,16 +34,16 @@
         {
           "name": "IMAGE",
           "type": "IMAGE",
+          "slot_index": 0,
           "links": [
             157
-          ],
-          "slot_index": 0
+          ]
         }
       ],
       "properties": {
+        "Node name for S&R": "Kandinsky5VAEDecode",
         "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5VAEDecode"
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
       "widgets_values": []
     },
@@ -318,15 +51,15 @@
       "id": 54,
       "type": "SaveAnimatedWEBP",
       "pos": [
-        1580.81591796875,
-        -201.1278076171875
+        953.2196044921875,
+        91.47215270996094
       ],
       "size": [
-        616.9959716796875,
-        569.41552734375
+        487.7459716796875,
+        484.7098693847656
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -345,23 +78,130 @@
         24,
         false,
         100,
-        "default",
+        "default"
+      ]
+    },
+    {
+      "id": 72,
+      "type": "Kandinsky5TextEncode",
+      "pos": [
+        175.8029327392578,
+        158.080322265625
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 143
+        },
+        {
+          "name": "extended_text",
+          "shape": 7,
+          "type": "PROMPT",
+          "link": 163
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "slot_index": 0,
+          "links": [
+            161
+          ]
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "slot_index": 1,
+          "links": [
+            160
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5TextEncode",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
         ""
+      ]
+    },
+    {
+      "id": 73,
+      "type": "Kandinsky5TextEncode",
+      "pos": [
+        179.4368133544922,
+        406.9901428222656
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 147
+        },
+        {
+          "name": "extended_text",
+          "shape": 7,
+          "type": "PROMPT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "slot_index": 0,
+          "links": [
+            159
+          ]
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "slot_index": 1,
+          "links": [
+            158
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5TextEncode",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards"
       ]
     },
     {
       "id": 75,
       "type": "Kandinsky5Generate",
       "pos": [
-        645.9276733398438,
-        330.11688232421875
+        610.8881225585938,
+        160.90586853027344
       ],
       "size": [
         315,
         282
       ],
       "flags": {},
-      "order": 7,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -399,16 +239,16 @@
         {
           "name": "latent",
           "type": "LATENT",
+          "slot_index": 0,
           "links": [
             156
-          ],
-          "slot_index": 0
+          ]
         }
       ],
       "properties": {
+        "Node name for S&R": "Kandinsky5Generate",
         "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5Generate"
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
       "widgets_values": [
         50,
@@ -416,19 +256,144 @@
         512,
         121,
         5,
-        5
+        10
+      ]
+    },
+    {
+      "id": 68,
+      "type": "expand_prompt",
+      "pos": [
+        -273.5207824707031,
+        268.80975341796875
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 139
+        }
+      ],
+      "outputs": [
+        {
+          "name": "exp_prompt",
+          "type": "PROMPT",
+          "slot_index": 0,
+          "links": [
+            163
+          ]
+        },
+        {
+          "name": "log",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "expand_prompt",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8"
+      },
+      "widgets_values": [
+        "A heroic astronaut in a sleek, futuristic white-and-silver space suit with reflective visor down, galloping on a majestic black stallion through rugged, snow-capped mountain peaks at golden hour. The horse’s mane flows wildly as it leaps over a rocky ridge, kicking up dust, while the astronaut grips the reins tightly, their suit subtly illuminated by the warm glow of the setting sun. Dramatic low-angle shot, with vast misty valleys below and a sky shifting from deep orange to twilight purple. Cinematic lighting, hyper-detailed, with a sense of epic adventure and sci-fi wonder."
+      ]
+    },
+    {
+      "id": 71,
+      "type": "Kandinsky5LoadTextEmbedders",
+      "pos": [
+        -241.9403839111328,
+        25.038286209106445
+      ],
+      "size": [
+        340.20001220703125,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            139,
+            143,
+            147
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5LoadTextEmbedders",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "text_encoder",
+        "text_encoder2"
       ]
     },
     {
       "id": 74,
       "type": "Kandinsky5LoadDiT",
       "pos": [
-        284.0606994628906,
-        -49.29227828979492
+        208.43588256835938,
+        27.57303810119629
       ],
       "size": [
         315,
         78
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            149
+          ]
+        },
+        {
+          "name": "conf",
+          "type": "CONFIG",
+          "slot_index": 1,
+          "links": [
+            162
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5LoadDiT",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "kandinsky5lite_t2v_sft_5s.safetensors"
+      ]
+    },
+    {
+      "id": 76,
+      "type": "Kandinsky5LoadVAE",
+      "pos": [
+        612.3971557617188,
+        23.200862884521484
+      ],
+      "size": [
+        315,
+        58
       ],
       "flags": {},
       "order": 2,
@@ -438,47 +403,23 @@
         {
           "name": "model",
           "type": "MODEL",
+          "slot_index": 0,
           "links": [
-            149
-          ],
-          "slot_index": 0
-        },
-        {
-          "name": "conf",
-          "type": "CONFIG",
-          "links": [
-            162
-          ],
-          "slot_index": 1
+            155
+          ]
         }
       ],
       "properties": {
+        "Node name for S&R": "Kandinsky5LoadVAE",
         "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b",
-        "Node name for S&R": "Kandinsky5LoadDiT"
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
       "widgets_values": [
-        "lite_sft_5s.safetensors"
+        "vae"
       ]
     }
   ],
   "links": [
-    [
-      133,
-      68,
-      1,
-      70,
-      0,
-      "STRING"
-    ],
-    [
-      138,
-      71,
-      0,
-      64,
-      0,
-      "MODEL"
-    ],
     [
       139,
       71,
@@ -574,18 +515,27 @@
       75,
       1,
       "CONFIG"
+    ],
+    [
+      163,
+      68,
+      0,
+      72,
+      1,
+      "PROMPT"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8000000000000032,
+      "scale": 0.6611570247933911,
       "offset": [
-        200.09457878665054,
-        -32.749839444394134
+        286.65909097964607,
+        84.06209500649425
       ]
-    }
+    },
+    "frontendVersion": "1.26.13"
   },
   "version": 0.4
 }
