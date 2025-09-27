@@ -44,8 +44,8 @@ All models are available in two versions: for generating 5-second and 10-second 
 | Kandinsky 5.0 T2V Lite SFT 10s      |        | 10s            | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s) |      224 s     |     85.36    |
 | Kandinsky 5.0 T2V Lite pretrain 5s  |        | 5s             | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s) |                |              |
 | Kandinsky 5.0 T2V Lite pretrain 10s |        | 10s            | 100 |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s) |                |              |
-| Kandinsky 5.0 T2V Lite no-CFG 5s    |        | 5s             | 50  |            |                |              |
-| Kandinsky 5.0 T2V Lite no-CFG 10s   |        | 10s            | 50  |            |                |              |
+| Kandinsky 5.0 T2V Lite no-CFG 5s    |        | 5s             | 50  |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-5s) |                |              |
+| Kandinsky 5.0 T2V Lite no-CFG 10s   |        | 10s            | 50  |🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-10s) |                |              |
 | Kandinsky 5.0 T2V Lite distill 5s   |        | 5s             | 16  | 🤗 [Huggingface](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
 | Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
 
