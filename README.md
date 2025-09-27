@@ -28,9 +28,9 @@ We provide 8 model variants, each optimized for different use cases:
 
 * SFT model — delivers the highest generation quality;
 
-* CFG-distilled — runs 2× faster with minimal quality loss;
+* CFG-distilled — runs 2× faster;
 
-* Diffusion-distilled — enables low-latency generation;
+* Diffusion-distilled — enables low-latency generation with minimal quality loss;
 
 * Pretrain model — designed for fine-tuning by researchers and enthusiasts.
 
@@ -40,13 +40,13 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 | Model                               | config | video duration | NFE | Checkpoint | Latency* (H100) | VBench score |
 |-------------------------------------|--------|----------------|-----|------------|----------------|--------------|
-| Kandinsky 5.0 T2V Lite SFT 5s       | ./configs/config_5s_sft.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s) |      139 s     |     84.02    |
-| Kandinsky 5.0 T2V Lite SFT 10s      |./configs/config_10s_sft.yaml| 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s) |      224 s     |     85.36    |
-| Kandinsky 5.0 T2V Lite pretrain 5s  |./configs/config_5s_pretrain.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s) |      139 s      |              |
-| Kandinsky 5.0 T2V Lite pretrain 10s |./configs/config_10s_pretrain.yaml | 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s) |     224 s      |              |
-| Kandinsky 5.0 T2V Lite no-CFG 5s    |./configs/config_5s_nocfg.yaml| 5s             | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-5s) |                |              |
-| Kandinsky 5.0 T2V Lite no-CFG 10s   |./configs/config_10s_nocfg.yaml| 10s            | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-10s) |                |              |
-| Kandinsky 5.0 T2V Lite distill 5s   |./configs/config_5s_distil.yaml| 5s             | 16  | 🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
+| Kandinsky 5.0 T2V Lite SFT 5s       |configs/config_5s_sft.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s) |      139 s     |     84.02    |
+| Kandinsky 5.0 T2V Lite SFT 10s      |configs/config_10s_sft.yaml| 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-sft-10s) |      224 s     |     85.36    |
+| Kandinsky 5.0 T2V Lite pretrain 5s  |configs/config_5s_pretrain.yaml | 5s             | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-5s) |      139 s      |              |
+| Kandinsky 5.0 T2V Lite pretrain 10s |configs/config_10s_pretrain.yaml | 10s            | 100 |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-pretrain-10s) |     224 s      |              |
+| Kandinsky 5.0 T2V Lite no-CFG 5s    |configs/config_5s_nocfg.yaml| 5s             | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-5s) |                |              |
+| Kandinsky 5.0 T2V Lite no-CFG 10s   |configs/config_10s_nocfg.yaml| 10s            | 50  |🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-nocfg-10s) |                |              |
+| Kandinsky 5.0 T2V Lite distill 5s   |configs/config_5s_distil.yaml| 5s             | 16  | 🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       37 s     |              |
 | Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
 
 *Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process.
@@ -55,25 +55,52 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 #### Kandinsky 5.0 T2V Lite SFT
 
-https://github.com/user-attachments/assets/bc38821b-f9f1-46db-885f-1f70464669eb
+<table border="0" style="width: 200; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/bc38821b-f9f1-46db-885f-1f70464669eb" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/9f64c940-4df8-4c51-bd81-a05de8e70fc3" width=200 controls autoplay loop></video>
+      </td>
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/77dd417f-e0bf-42bd-8d80-daffcd054add" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/385a0076-f01c-4663-aa46-6ce50352b9ed" width=200 controls autoplay loop></video>
+      </td>
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/7c1bcb31-cc7d-4385-9a33-2b0cc28393dd" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/990a8a0b-2df1-4bbc-b2e3-2859b6f1eea6" width=200 controls autoplay loop></video>
+      </td>
+  </tr>
 
-https://github.com/user-attachments/assets/9f64c940-4df8-4c51-bd81-a05de8e70fc3
+</table>
 
-https://github.com/user-attachments/assets/77dd417f-e0bf-42bd-8d80-daffcd054add
-
-https://github.com/user-attachments/assets/385a0076-f01c-4663-aa46-6ce50352b9ed
-
-https://github.com/user-attachments/assets/7c1bcb31-cc7d-4385-9a33-2b0cc28393dd
-
-https://github.com/user-attachments/assets/990a8a0b-2df1-4bbc-b2e3-2859b6f1eea6
 
 #### Kandinsky 5.0 T2V Lite Distill
 
-https://github.com/user-attachments/assets/861342f9-f576-4083-8a3b-94570a970d58
+<table border="0" style="width: 200; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/861342f9-f576-4083-8a3b-94570a970d58" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/302e4e7d-781d-4a58-9b10-8c473d469c4b" width=200 controls autoplay loop></video>
+      </td>
+  <tr>
+      <td>
+          <video src="https://github.com/user-attachments/assets/3e70175c-40e5-4aec-b506-38006fe91a76" width=200 controls autoplay loop></video>
+      </td>
+      <td>
+          <video src="https://github.com/user-attachments/assets/b7da85f7-8b62-4d46-9460-7f0e505de810" width=200 controls autoplay loop></video>
+      </td>
 
-https://github.com/user-attachments/assets/302e4e7d-781d-4a58-9b10-8c473d469c4b
-
-https://github.com/user-attachments/assets/3e70175c-40e5-4aec-b506-38006fe91a76
+</table>
 
 ### Results:
 
@@ -202,6 +229,7 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
       - [ ] rl
       - [x] cfg distil 
       - [x] distil 16 steps
+      - [ ] autoregressive generation
     - [x] ComfyUI integration
     - [ ] Diffusers integration
     - [ ] Caching acceleration support
