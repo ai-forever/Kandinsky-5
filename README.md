@@ -36,6 +36,23 @@ We provide 8 model variants, each optimized for different use cases:
 
 All models are available in two versions: for generating 5-second and 10-second videos.
 
+## Pipeline
+
+**Latent diffusion pipeline** with **Flow Matching**.
+
+**Diffusion Transformer (DiT)** as the main generative backbone with **cross-attention to text embeddings**.
+
+- **Qwen2.5-VL** and **CLIP** provides text embeddings.
+
+- **HunyuanVideo 3D VAE** encodes/decodes video into a latent space.
+
+- **DiT** is the main generative module using cross-attention to condition on text.
+
+<img width="1600" height="477" alt="Picture1" src="https://github.com/user-attachments/assets/17fc2eb5-05e3-4591-9ec6-0f6e1ca397b3" />
+
+<img width="1600" height="813" alt="Picture2" src="https://github.com/user-attachments/assets/f3006742-e261-4c39-b7dc-e39330be9a09" />
+
+
 ## Model Zoo
 
 | Model                               | config | video duration | NFE | Checkpoint | Latency* (H100) | VBench score |
