@@ -74,6 +74,13 @@
                     <span>Code</span>
                   </a>
                 </span>
+                <!-- HuggingFace Link. -->
+                <span class="link-block">
+                  <a href="https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span>🤗Models</span>
+                  </a>
+                </span>
               </div>
 
             </div>
@@ -141,11 +148,13 @@
                   <strong>Diffusion Transformer (DiT)</strong> as the main generative backbone with <strong>cross-attention to text embeddings</strong>.
                 </p>
                 <ul>
-                  <li><strong>Qwen2.5-VL</strong> provides text embeddings.</li>
+                  <li><strong>Qwen2.5-VL</strong> and <strong>CLIP</strong> provide text embeddings.</li>
                   <li><strong>HunyuanVideo 3D VAE</strong> encodes/decodes video into a latent space.</li>
                   <li><strong>DiT</strong> is the main generative module using cross-attention to condition on text.</li>
                 </ul>
               </section>
+              <br />
+              <img src="./static/images/model_1.png" class="interpolation-image" alt="Interpolate start reference image." />
               <br />
               <section>
                 <h2>Model Inputs</h2>
@@ -155,7 +164,7 @@
                     <ul>
                       <li>Embeddings from <strong>Qwen2.5-VL</strong> (transformer decoder).</li>
                       <li>Augmented with <strong>1D Rotary Position Embeddings (RoPE)</strong>.</li>
-                      <li>Refined by the <strong>Linguistic Token Refiner</strong>, which prepares text tokens for cross-attention inside DiT.</li>
+                      <li>Refined by the <strong>Linguistic Token Refiner</strong> with bidirectional attention, which prepares text tokens for cross-attention inside DiT.</li>
                     </ul>
                   </li>
 
@@ -185,6 +194,8 @@
                   </li>
                 </ol>
               </section>
+              <br />
+              <img src="./static/images/model_2.png" class="interpolation-image" alt="Interpolate start reference image." />
             </p>
           </div>
         </div>
@@ -200,13 +211,6 @@
           <div class="container">
             <table class="center">
               <tbody>
-                <tr<td>
-                  </td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  </tr>
                   <tr>
                     <td><video controls="controls" autoplay="autoplay">
                         <source src="assets/generation_examples/sft/1.mp4" type="video/mp4" /></video></td>
@@ -222,6 +226,19 @@
                         <source src="assets/generation_examples/sft/5.mp4" type="video/mp4" /></video></td>
                     <td><video controls="controls" autoplay="autoplay">
                         <source src="assets/generation_examples/sft/6.mp4" type="video/mp4" /></video></td>
+                  </tr>
+                  <tr>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/rcc/1.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/rcc/2.mp4" type="video/mp4" /></video></td>
+                    <td><video controls="controls" autoplay="autoplay">
+                        <source src="assets/generation_examples/rcc/3.mp4" type="video/mp4" /></video></td>
+                  </tr>
+                  <tr>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
+                    <td width="33.3%" style="text-align:center;"></td>
                   </tr>
               </tbody>
             </table>
@@ -239,13 +256,6 @@
           <div class="container">
             <table class="center">
               <tbody>
-                <tr<td>
-                  </td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  </tr>
                   <tr>
                     <td><video controls="controls" autoplay="autoplay">
                         <source src="assets/generation_examples/distill/1.mp4" type="video/mp4" /></video></td>
@@ -253,11 +263,6 @@
                         <source src="assets/generation_examples/distill/2.mp4" type="video/mp4" /></video></td>
                     <td><video controls="controls" autoplay="autoplay">
                         <source src="assets/generation_examples/distill/3.mp4" type="video/mp4" /></video></td>
-                  </tr>
-                  <tr>
-                    <td width="33.3%" style="text-align:center;"></td>
-                    <td width="33.3%" style="text-align:center;"></td>
-                    <td width="33.3%" style="text-align:center;"></td>
                   </tr>
                   <tr>
                     <td><video controls="controls" autoplay="autoplay">
@@ -276,6 +281,51 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+<section class="hero is-small">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+      <h2 class="title is-3">Comparison with Other Models</h2>
+      <br />
+      <h3 class="title is-3">Side-by-Side evaluation</h3>
+      <br />
+      The evaluation is based on the expanded prompts from the <strong><a href="https://github.com/facebookresearch/MovieGenBench">Movie Gen benchmark</a></strong>.
+      <br />
+        <div class="content has-text-justified">
+          <div class="container">
+            <table class="center">
+              <tbody>
+                  <tr>
+                    <td>
+                      <img src="./static/images/kandinsky_5_video_lite_vs_sora.jpg" class="interpolation-image" alt="Interpolate start reference image." />
+                    </td>
+                    <td>
+                      <img src="./static/images/kandinsky_5_video_lite_vs_wan_2.1_14B.jpg" class="interpolation-image" alt="Interpolate start reference image." />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td width="50%" style="text-align:center;"></td>
+                    <td width="50%" style="text-align:center;"></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <img src="./static/images/kandinsky_5_video_lite_vs_wan_2.2_5B.jpg" class="interpolation-image" alt="Interpolate start reference image." />
+                    </td>
+                    <td>
+                      <img src="./static/images/kandinsky_5_video_lite_vs_wan_2.2_A14B.jpg" class="interpolation-image" alt="Interpolate start reference image." />
+                    </td>
+                  </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <br />
+        <h3 class="title is-3">VBench results</h3>
+        <br />
+        <img src="./assets/vbench.png" class="interpolation-image" alt="Interpolate start reference image." />
       </div>
     </div>
   </section>
