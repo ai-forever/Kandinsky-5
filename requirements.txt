@@ -10,7 +10,7 @@ websocket-client
 beautifulsoup4
 torch >= 2.8.0
 torchvision
-transformers
+transformers >= 4.56.2
 diffusers
 accelerate
 einops
