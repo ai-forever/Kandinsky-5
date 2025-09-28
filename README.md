@@ -12,7 +12,7 @@
 
 <h1>Kandinsky 5.0: A family of diffusion models for Video & Image generation</h1>
 
-In this repository, we provide a family of diffusion models to generate a video or an image (<em>Coming Soon</em>) given a textual prompt and distilled model for a faster generation.
+In this repository, we provide a family of diffusion models to generate a video or an image (<em>Coming Soon</em>) given a textual prompt and distilled model for faster generation.
 
 https://github.com/user-attachments/assets/b9ff0417-02a4-4f6b-aacc-60c44e7fe6f1
 
