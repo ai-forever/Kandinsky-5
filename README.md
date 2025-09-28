@@ -50,7 +50,7 @@ All models are available in two versions: for generating 5-second and 10-second 
 
 <img width="1600" height="477" alt="Picture1" src="https://github.com/user-attachments/assets/17fc2eb5-05e3-4591-9ec6-0f6e1ca397b3" />
 
-<img width="1600" height="813" alt="Picture2" src="https://github.com/user-attachments/assets/f3006742-e261-4c39-b7dc-e39330be9a09" />
+<img width="800" height="406" alt="Picture2" src="https://github.com/user-attachments/assets/f3006742-e261-4c39-b7dc-e39330be9a09" />
 
 
 ## Model Zoo
