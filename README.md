@@ -256,6 +256,10 @@ NUMBER_OF_DEVICES_PER_NODE=1 / 2 / 4
 python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $NUMBER_OF_DEVICES_PER_NODE test.py
 ```
 
+### ComfyUI
+
+See the instruction [here](comfyui)
+
 ## 📑 Todo List
 - Kandinsky 5.0 Lite Text-to-Video
     - [x] Multi-GPU Inference code of the 2B models
