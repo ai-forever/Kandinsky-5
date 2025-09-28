@@ -32,18 +32,25 @@ model:
     visual_cond: true
     in_text_dim: 3584
     in_text_dim2: 768
-  attention:
-    type: nabla
-    causal: false
-    local: false
-    glob: false
-    window: 3
-    P: 0.9
-    wT: 11
-    wW: 3
-    wH: 3
-    add_sta: true
-    method: topcdf
+  attentions:
+    nabla_attention:
+      type: nabla
+      causal: false
+      local: false
+      glob: false
+      window: 3
+      P: 0.9
+      wT: 11
+      wW: 3
+      wH: 3
+      add_sta: true
+      method: topcdf
+    flash_attention:
+      type: flash
+      causal: false
+      local: false
+      glob: false
+      window: 3
   vae:
     checkpoint_path: "./weights/vae/"
     name: "hunyuan"

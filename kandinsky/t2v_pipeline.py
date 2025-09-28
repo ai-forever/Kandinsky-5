@@ -107,7 +107,9 @@ class Kandinsky5T2VPipeline:
         default_guidance_weight = 5.0 if mode == "sft" else 1.0
         num_steps = default_num_steps if num_steps is None else num_steps
         guidance_weight = default_guidance_weight if guidance_weight is None else guidance_weight
+        self.conf.model.attention =  self.conf.model.attentions.nabla_attention if time_length > 5 else self.conf.model.attentions.flash_attention
         key = f"{mode}_{time_length}s"
+        
         dit = self.dits[key]
         # SEED
         if seed is None:
@@ -146,7 +148,7 @@ class Kandinsky5T2VPipeline:
                 caption = caption[0]
 
         shape = (1, num_frames, height // 8, width // 8, 16)
-
+        
         # GENERATION
         images = generate_sample(
             shape,

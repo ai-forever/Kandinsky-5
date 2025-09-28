@@ -104,6 +104,7 @@ def get_T2V_pipeline(
     for key, ckpt_path in conf.model.checkpoint_paths.items():
         dits[key] = deepcopy(dit)
         state_dict = load_file(ckpt_path)
+        print(key)
         dits[key].load_state_dict(state_dict, assign=True)
         if not offload:
             dits[key] = dits[key].to(device_map["dit"])
