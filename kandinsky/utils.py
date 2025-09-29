@@ -32,8 +32,6 @@ def get_T2V_pipeline(
     offload: bool = False,
     magcache: bool = False,
 ) -> Kandinsky5T2VPipeline:
-    disable_warnings()
-
     assert resolution in [512]
 
     if not isinstance(device_map, dict):
