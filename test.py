@@ -1,5 +1,9 @@
 import argparse
 import time
+import warnings
+import logging
+
+import torch
 
 from kandinsky import get_T2V_pipeline
 
@@ -10,6 +14,19 @@ def validate_args(args):
     if not size in supported_sizes:
         raise NotImplementedError(
             f"Provided size of video is not supported: {size}")
+
+
+def disable_warnings():
+    warnings.filterwarnings("ignore")
+    logging.getLogger("torch").setLevel(logging.ERROR)
+    torch._logging.set_logs(
+        dynamo=logging.ERROR,
+        dynamic=logging.ERROR,
+        aot=logging.ERROR,
+        inductor=logging.ERROR,
+        guards=False,
+        recompiles=False
+    )
 
 
 def parse_args():
@@ -107,6 +124,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    disable_warnings()
     args = parse_args()
     validate_args(args)
 
