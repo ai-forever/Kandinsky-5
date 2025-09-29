@@ -164,7 +164,7 @@ def magcache_calibration(
         print(self.norm_std)
         print("cos_dis")
         print(self.cos_dis)
-        save_json("wan2_1_mag_ratio", self.norm_ratio)
-        save_json("wan2_1_mag_std", self.norm_std)
-        save_json("wan2_1_cos_dis", self.cos_dis)
+        save_json("kandinsky5_mag_ratio", self.norm_ratio)
+        save_json("kandinsky5_mag_std", self.norm_std)
+        save_json("kandinsky5_cos_dis", self.cos_dis)
     return x
