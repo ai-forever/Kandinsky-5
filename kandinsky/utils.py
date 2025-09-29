@@ -1,5 +1,6 @@
 import os
 from typing import Optional, Union
+
 import torch
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
@@ -12,10 +13,12 @@ from .models.text_embedders import get_text_embedder
 from .models.vae import build_vae
 from .models.parallelize import parallelize_dit
 from .t2v_pipeline import Kandinsky5T2VPipeline
+from .magcache_utils import set_magcache_params
 
 from safetensors.torch import load_file
 
 torch._dynamo.config.suppress_errors = True
+
 
 def get_T2V_pipeline(
     device_map: Union[str, torch.device, dict],
@@ -27,7 +30,10 @@ def get_T2V_pipeline(
     vae_path: str = None,
     conf_path: str = None,
     offload: bool = False,
+    magcache: bool = False,
 ) -> Kandinsky5T2VPipeline:
+    disable_warnings()
+
     assert resolution in [512]
 
     if not isinstance(device_map, dict):
@@ -99,10 +105,13 @@ def get_T2V_pipeline(
         vae = vae.to(device=device_map["vae"]) 
 
     dit = get_dit(conf.model.dit_params)
+
+    if magcache:
+        set_magcache_params(dit, conf.magcache.mag_ratios)
+
     state_dict = load_file(conf.model.checkpoint_path)
-
-
     dit.load_state_dict(state_dict, assign=True)
+
     if not offload:
         dit = dit.to(device_map["dit"])
 

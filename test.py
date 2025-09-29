@@ -92,9 +92,15 @@ def parse_args():
 
     parser.add_argument(
         "--offload",
-        type=bool,
+        action='store_true',
         default=False,
         help="Offload models to save memory or not"
+    )
+    parser.add_argument(
+        "--magcache",
+        action='store_true',
+        default=False,
+        help="Using MagCache (for 50 steps models only)"
     )
     args = parser.parse_args()
     return args
@@ -109,6 +115,7 @@ if __name__ == "__main__":
                     "text_embedder": "cuda:0"},
         conf_path=args.config,
         offload=args.offload,
+        magcache=args.magcache,
     )
 
     if args.output_filename is None:
