@@ -290,6 +290,7 @@ See the instruction [here](comfyui)
     - [ ] Checkpoints of the model
     - [ ] ComfyUI integration
     - [ ] Diffusers integration
+- [ ] Technical report
 
 # Authors
 <B>Project Leader:</B> Denis Dimitrov</br>
@@ -299,3 +300,32 @@ See the instruction [here](comfyui)
 <B>Core Contributors:</B> Alexey Letunovskiy, Maria Kovaleva, Ivan Kirillov, Lev Novitskiy, Denis Koposov, Dmitrii Mikhailov, Anna Averchenkova, Andrey Shutkin, Julia Agafonova, Olga Kim, Anastasiia Kargapoltseva, Nikita Kiselev</br>
 
 <B>Contributors:</B> Anna Dmitrienko,  Anastasia Maltseva, Kirill Chernyshev, Ilia Vasiliev, Viacheslav Vasilev, Vladimir Polovnikov, Yury Kolabushin, Alexander Belykh, Mikhail Mamaev, Anastasia Aliaskina, Tatiana Nikulina, Polina Gavrilova</br>
+
+# Citation
+
+```
+@misc{kandinsky2025,
+    author = {Alexey Letunovskiy, Maria Kovaleva, Ivan Kirillov, Lev Novitskiy, Denis Koposov,
+              Dmitrii Mikhailov, Anna Averchenkova, Andrey Shutkin, Julia Agafonova, Olga Kim,
+              Anastasiia Kargapoltseva, Nikita Kiselev, Vladimir Arkhipkin, Vladimir Korviakov,
+              Nikolai Gerasimenko, Denis Parkhomenko, Anna Dmitrienko, Anastasia Maltseva,
+              Kirill Chernyshev, Ilia Vasiliev, Viacheslav Vasilev, Vladimir Polovnikov,
+              Yury Kolabushin, Alexander Belykh, Mikhail Mamaev, Anastasia Aliaskina,
+              Tatiana Nikulina, Polina Gavrilova, Denis Dimitrov},
+    title = {Kandinsky 5.0: A family of diffusion models for Video & Image generation},
+    howpublished = {\url{https://github.com/ai-forever/Kandinsky-5}},
+    year = 2025
+}
+
+@misc{mikhailov2025nablanablaneighborhoodadaptiveblocklevel,
+      title={$\nabla$NABLA: Neighborhood Adaptive Block-Level Attention}, 
+      author={Dmitrii Mikhailov and Aleksey Letunovskiy and Maria Kovaleva and Vladimir Arkhipkin
+              and Vladimir Korviakov and Vladimir Polovnikov and Viacheslav Vasilev
+              and Evelina Sidorova and Denis Dimitrov},
+      year={2025},
+      eprint={2507.13546},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2507.13546}, 
+}
+```
