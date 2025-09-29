@@ -7,7 +7,7 @@
 </div>
 
 <div align="center">
-  <a href="">Habr</a> | <a href="https://gen-ai-team.github.io/kandinsky-5-inference/">Project Page</a> | Technical Report (soon) | <a href=https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5> Models🤗 </a>
+  <a href="">Habr</a> | <a href="https://ai-forever.github.io/Kandinsky-5/">Project Page</a> | Technical Report (soon) | <a href=https://huggingface.co/collections/ai-forever/kandisnky-50-t2v-lite-68d71892d2cc9b02177e5ae5> Models🤗 </a>
 </div>
 
 <h1>Kandinsky 5.0: A family of diffusion models for Video & Image generation</h1>
