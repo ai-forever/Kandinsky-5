@@ -66,7 +66,7 @@ All models are available in two versions: for generating 5-second and 10-second 
 | Kandinsky 5.0 T2V Lite distill 5s   |configs/config_5s_distil.yaml| 5s             | 16  | 🤗 [HF](https://huggingface.co/ai-forever/Kandinsky-5.0-T2V-Lite-distilled16steps-5s)|       35 s     |              |
 | Kandinsky 5.0 T2V Lite distill 10s  |        | 10s            | 16  |            |                |              |
 
-*Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process.
+*Latency was measured after the second inference run. The first run of the model can be slower due to the compilation process. For 5-second models Flash Attention 3 was used.
 
 ### Examples:
 
@@ -164,6 +164,8 @@ Install dependencies: # TODO add requirements.txt
 ```sh
 pip install -r requirements.txt
 ```
+
+To improve inference performance on NVidia Hopper GPUs, we recommend installing [Flash Attention 3](https://github.com/Dao-AILab/flash-attention/?tab=readme-ov-file#flashattention-3-beta-release).
 
 #### Model Download
 ```sh
