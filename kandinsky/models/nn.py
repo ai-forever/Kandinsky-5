@@ -6,14 +6,14 @@ from torch.nn.attention.flex_attention import flex_attention
 
 from .utils import get_freqs, nablaT_v2
 
-if torch.cuda.get_device_capability()[0] >= 9:
-    try:
-        from flash_attn_interface import flash_attn_func as FA
-    except:
-        FA = None
-        
+if torch.cuda.get_device_capability()[0] >= 9:        
     try:
         from flash_attn import flash_attn_func as FA
+    except:
+        FA = None
+
+    try:
+        from flash_attn_interface import flash_attn_func as FA
     except:
         FA = None
 else:
