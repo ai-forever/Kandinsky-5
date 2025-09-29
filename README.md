@@ -156,8 +156,8 @@ The evaluation is based on the expanded prompts from the [Movie Gen benchmark](h
 #### Installation
 Clone the repo:
 ```sh
-git clone TODO add actual repo
-cd TODO add actual repo name
+git clone https://github.com/ai-forever/Kandinsky-5.git
+cd Kandinsky-5
 ```
 
 Install dependencies: # TODO add requirements.txt
