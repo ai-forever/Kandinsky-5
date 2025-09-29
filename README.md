@@ -160,7 +160,7 @@ git clone https://github.com/ai-forever/Kandinsky-5.git
 cd Kandinsky-5
 ```
 
-Install dependencies: # TODO add requirements.txt
+Install dependencies:
 ```sh
 pip install -r requirements.txt
 ```
@@ -216,9 +216,7 @@ python test.py --config ./configs/config_5s_distil.yaml --prompt "A dog in red h
 
 #### Run Kandinsky 5.0 T2V Lite distill 10s
 
-```sh
-TODO: add example
-```
+Coming soon
 
 ### Inference
 
