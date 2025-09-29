@@ -30,7 +30,7 @@ We provide 8 model variants, each optimized for different use cases:
 
 * CFG-distilled — runs 2× faster;
 
-* Diffusion-distilled — enables low-latency generation with minimal quality loss;
+* Diffusion-distilled — enables low-latency generation with minimal quality loss (6× faster);
 
 * Pretrain model — designed for fine-tuning by researchers and enthusiasts.
 
