@@ -147,6 +147,19 @@ The evaluation is based on the expanded prompts from the [Movie Gen benchmark](h
 
 </table>
 
+#### Distill Side-by-Side evaluation
+
+<table border="0" style="width: 400; text-align: left; margin-top: 20px;">
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_5s_vs_kandinsky_5_video_lite_distill_5s" width=400 ></img>
+      </td>
+      <!-- <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.1_14B.jpg" width=400 ></img>
+      </td> -->
+
+</table>
+
 #### VBench results
 
 <div align="center">
