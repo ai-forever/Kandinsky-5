@@ -140,6 +140,10 @@ The evaluation is based on the expanded prompts from the [Movie Gen benchmark](h
       <td>
           <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.2_A14B.jpg" width=400 ></img>
       </td>
+  <tr>
+      <td>
+          <img src="assets/sbs/kandinsky_5_video_lite_vs_wan_2.1_1.3B.jpg" width=400 ></img>
+      </td>
 
 </table>
 
