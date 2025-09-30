@@ -97,7 +97,7 @@ def parse_args():
     parser.add_argument(
         "--scheduler_scale",
         type=float,
-        default=10.0,
+        default=5.0,
         help="Scheduler scale."
     )
     parser.add_argument(
