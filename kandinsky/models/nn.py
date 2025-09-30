@@ -15,7 +15,7 @@ if torch.cuda.get_device_capability()[0] >= 9:
     try:
         from flash_attn_interface import flash_attn_func as FA
     except:
-        FA = None
+        FA = FA
 else:
     try:
         from flash_attn import flash_attn_func as FA
