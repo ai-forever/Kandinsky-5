@@ -364,3 +364,17 @@ You can apply to participate in the beta testing of the Kandinsky Video Lite via
       url={https://arxiv.org/abs/2507.13546}, 
 }
 ```
+
+# Acknowledgements
+
+We gratefully acknowledge the open-source projects and research that made Kandinsky 5.0 possible:
+
+- [PyTorch](https://pytorch.org/) — for model training and inference.  
+- [FlashAttention 3](https://github.com/Dao-AILab/flash-attention) — for efficient attention and faster inference.  
+- [Qwen2.5-VL](https://github.com/QwenLM/Qwen3-VL) — for providing high-quality text embeddings.  
+- [CLIP](https://github.com/openai/CLIP) — for robust text–image alignment.  
+- [HunyuanVideo](https://huggingface.co/tencent/HunyuanVideo) — for video latent encoding and decoding.  
+- [MagCache](https://github.com/Zehong-Ma/MagCache) — for accelerated inference.
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — for integration into node-based workflows.  
+
+We deeply appreciate the contributions of these communities and researchers to the open-source ecosystem.
