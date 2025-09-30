@@ -216,7 +216,9 @@ python test.py --config ./configs/config_5s_distil.yaml --prompt "A dog in red h
 
 #### Run Kandinsky 5.0 T2V Lite distill 10s
 
-Coming soon
+```sh
+python test.py --config ./configs/config_10s_distil.yaml --prompt "A dog in red hat" --video_duration 10
+```
 
 ### Inference
 
