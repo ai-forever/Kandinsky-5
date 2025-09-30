@@ -1,5 +1,9 @@
 import argparse
 import time
+import warnings
+import logging
+
+import torch
 
 from kandinsky import get_T2V_pipeline
 
@@ -10,6 +14,19 @@ def validate_args(args):
     if not size in supported_sizes:
         raise NotImplementedError(
             f"Provided size of video is not supported: {size}")
+
+
+def disable_warnings():
+    warnings.filterwarnings("ignore")
+    logging.getLogger("torch").setLevel(logging.ERROR)
+    torch._logging.set_logs(
+        dynamo=logging.ERROR,
+        dynamic=logging.ERROR,
+        aot=logging.ERROR,
+        inductor=logging.ERROR,
+        guards=False,
+        recompiles=False
+    )
 
 
 def parse_args():
@@ -92,15 +109,22 @@ def parse_args():
 
     parser.add_argument(
         "--offload",
-        type=bool,
+        action='store_true',
         default=False,
         help="Offload models to save memory or not"
+    )
+    parser.add_argument(
+        "--magcache",
+        action='store_true',
+        default=False,
+        help="Using MagCache (for 50 steps models only)"
     )
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
+    disable_warnings()
     args = parse_args()
     validate_args(args)
 
@@ -109,6 +133,7 @@ if __name__ == "__main__":
                     "text_embedder": "cuda:0"},
         conf_path=args.config,
         offload=args.offload,
+        magcache=args.magcache,
     )
 
     if args.output_filename is None:
