@@ -260,6 +260,9 @@ python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $N
 
 See the instruction [here](comfyui)
 
+### Beta testing
+You can apply to participate in the beta testing of the models via the [telegram bot](https://t.me/kandinsky_access_bot).
+
 ## 📑 Todo List
 - Kandinsky 5.0 Lite Text-to-Video
     - [x] Multi-GPU Inference code of the 2B models
