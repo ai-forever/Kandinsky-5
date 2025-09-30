@@ -275,6 +275,21 @@ NUMBER_OF_DEVICES_PER_NODE=1 / 2 / 4
 python -m torch.distributed.launch --nnodes $NUMBER_OF_NODES --nproc-per-node $NUMBER_OF_DEVICES_PER_NODE test.py
 ```
 
+### Optimized Inference
+
+#### Offloading
+For less memory consumption you can use **offloading** of the models.
+```sh
+python test.py --prompt "A dog in red hat" --offload
+```
+
+#### Magcache
+Also we provide [Magcache](https://github.com/Zehong-Ma/MagCache) inference for faster generations (now available for sft 5s and sft 10s checkpoints).
+
+```sh
+python test.py --prompt "A dog in red hat" --magcache
+```
+
 ### ComfyUI
 
 See the instruction [here](comfyui)
