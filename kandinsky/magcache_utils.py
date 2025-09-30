@@ -34,7 +34,7 @@ def set_magcache_params(dit, mag_ratios):
     dit.retention_ratio = 0.2
     dit.residual_cache = [None, None]
     dit.mag_ratios = np.array([1.0]*2 + mag_ratios)
-    # Nearest interpolation when the num_steps is different from the length of mag_ratios
+
     if len(dit.mag_ratios) != 50 * 2:
         print(f'interpolate MAG RATIOS: curr len {len(dit.mag_ratios)}')
         mag_ratio_con = nearest_interp(dit.mag_ratios[0::2], 50)
@@ -79,7 +79,7 @@ def magcache_forward(
 
     if self.cnt>=int(self.num_steps*self.retention_ratio):
         cur_mag_ratio = self.mag_ratios[self.cnt] # conditional and unconditional in one list
-        self.accumulated_ratio[self.cnt%2] = self.accumulated_ratio[self.cnt%2]*cur_mag_ratio # magnitude ratio between current step and the cached step
+        self.accumulated_ratio[self.cnt%2] = self.accumulated_ratio[self.cnt%2]*cur_mag_ratio 
         self.accumulated_steps[self.cnt%2] += 1 # skip steps plus 1
         cur_skip_err = np.abs(1-self.accumulated_ratio[self.cnt%2]) # skip error of current steps
         self.accumulated_err[self.cnt%2] += cur_skip_err # accumulated error of multiple steps
@@ -107,7 +107,7 @@ def magcache_forward(
 
     self.cnt += 1
 
-    if self.cnt >= self.num_steps: # clear the history of current video and prepare for generating the next video.
+    if self.cnt >= self.num_steps: 
         self.cnt = 0
         self.accumulated_ratio = [1.0, 1.0]
         self.accumulated_err = [0.0, 0.0]
