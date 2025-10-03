@@ -151,3 +151,4 @@ if __name__ == "__main__":
              save_path=args.output_filename)
     print(f"TIME ELAPSED: {time.perf_counter() - start_time}")
     print(f"Generated video is saved to {args.output_filename}")
+    

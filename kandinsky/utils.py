@@ -105,7 +105,12 @@ def get_T2V_pipeline(
     dit = get_dit(conf.model.dit_params)
 
     if magcache:
-        set_magcache_params(dit, conf.magcache.mag_ratios)
+        mag_ratios = conf.magcache.mag_ratios
+        num_steps = conf.model.num_steps
+        no_cfg = False
+        if conf.model.guidance_weight == 1.0:
+            no_cfg = True
+        set_magcache_params(dit, mag_ratios, num_steps, no_cfg)
 
     state_dict = load_file(conf.model.checkpoint_path)
     dit.load_state_dict(state_dict, assign=True)

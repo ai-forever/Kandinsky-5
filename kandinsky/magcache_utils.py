@@ -1,3 +1,4 @@
+# This is an adaptation of Magcache from https://github.com/Zehong-Ma/MagCache/
 import numpy as np
 import torch
 
@@ -12,11 +13,11 @@ def nearest_interp(src_array, target_length):
     return src_array[mapped_indices]
 
 
-def set_magcache_params(dit, mag_ratios):
+def set_magcache_params(dit, mag_ratios, num_steps, no_cfg):
     print(f'using Magcache')
     dit.__class__.forward = magcache_forward
     dit.cnt = 0
-    dit.num_steps = 50 * 2
+    dit.num_steps = num_steps * 2
     dit.magcache_thresh = 0.12
     dit.K = 2
     dit.accumulated_err = [0.0, 0.0]
@@ -25,11 +26,12 @@ def set_magcache_params(dit, mag_ratios):
     dit.retention_ratio = 0.2
     dit.residual_cache = [None, None]
     dit.mag_ratios = np.array([1.0]*2 + mag_ratios)
+    dit.no_cfg = no_cfg
 
-    if len(dit.mag_ratios) != 50 * 2:
+    if len(dit.mag_ratios) != num_steps * 2:
         print(f'interpolate MAG RATIOS: curr len {len(dit.mag_ratios)}')
-        mag_ratio_con = nearest_interp(dit.mag_ratios[0::2], 50)
-        mag_ratio_ucon = nearest_interp(dit.mag_ratios[1::2], 50)
+        mag_ratio_con = nearest_interp(dit.mag_ratios[0::2], num_steps)
+        mag_ratio_ucon = nearest_interp(dit.mag_ratios[1::2], num_steps)
         interpolated_mag_ratios = np.concatenate(
             [mag_ratio_con.reshape(-1, 1), mag_ratio_ucon.reshape(-1, 1)], axis=1).reshape(-1)
         dit.mag_ratios = interpolated_mag_ratios
@@ -60,11 +62,11 @@ def magcache_forward(
     ori_visual_embed = visual_embed
 
     if self.cnt>=int(self.num_steps*self.retention_ratio):
-        cur_mag_ratio = self.mag_ratios[self.cnt] # conditional and unconditional in one list
+        cur_mag_ratio = self.mag_ratios[self.cnt] 
         self.accumulated_ratio[self.cnt%2] = self.accumulated_ratio[self.cnt%2]*cur_mag_ratio 
-        self.accumulated_steps[self.cnt%2] += 1 # skip steps plus 1
-        cur_skip_err = np.abs(1-self.accumulated_ratio[self.cnt%2]) # skip error of current steps
-        self.accumulated_err[self.cnt%2] += cur_skip_err # accumulated error of multiple steps
+        self.accumulated_steps[self.cnt%2] += 1 
+        cur_skip_err = np.abs(1-self.accumulated_ratio[self.cnt%2]) 
+        self.accumulated_err[self.cnt%2] += cur_skip_err 
         
         if self.accumulated_err[self.cnt%2]<self.magcache_thresh and self.accumulated_steps[self.cnt%2]<=self.K:
             skip_forward = True
@@ -77,7 +79,6 @@ def magcache_forward(
     if skip_forward: 
         visual_embed =  visual_embed + residual_visual_embed
     else:
-        # Original Forward 
         for visual_transformer_block in self.visual_transformer_blocks:
             visual_embed = visual_transformer_block(visual_embed, text_embed, time_embed,
                                                     visual_rope, sparse_params) 
@@ -87,7 +88,10 @@ def magcache_forward(
 
     x = self.after_blocks(visual_embed, visual_shape, to_fractal, text_embed, time_embed)
 
-    self.cnt += 1
+    if self.no_cfg:
+        self.cnt += 2
+    else:
+        self.cnt += 1
 
     if self.cnt >= self.num_steps: 
         self.cnt = 0
