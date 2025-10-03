@@ -18,3 +18,6 @@ python download_models.py
 ```sh
 python -m torch.distributed.launch --nnodes 1 --nproc-per-node 1 test_pml.py --path "./test1.mp4"
 ```
+
+
+Please refer to the main branch of this repo to explore full Kandinsky5 🚀
