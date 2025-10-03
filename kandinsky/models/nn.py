@@ -2,6 +2,7 @@ import math
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.nn.attention.flex_attention import flex_attention
 
 from .utils import get_freqs, nablaT_v2
@@ -9,18 +10,41 @@ from .utils import get_freqs, nablaT_v2
 if torch.cuda.get_device_capability()[0] >= 9:        
     try:
         from flash_attn import flash_attn_func as FA
+        print("FlashAttention 2 is found")
     except:
         FA = None
 
     try:
         from flash_attn_interface import flash_attn_func as FA
+        print("FlashAttention 3 is found")
     except:
         FA = FA
 else:
     try:
         from flash_attn import flash_attn_func as FA
+        print("FlashAttention 2 is found")
     except:
         FA = None
+
+@torch.compile(mode="max-autotune-no-cudagraphs", dynamic=True)
+def sdpa(q, k, v):
+    query = q.transpose(1, 2).contiguous()
+    key = k.transpose(1, 2).contiguous()
+    value = v.transpose(1, 2).contiguous()
+    out = (
+        F.scaled_dot_product_attention(
+            query,
+            key,
+            value
+        )
+        .transpose(1, 2)
+        .contiguous()
+    )
+    return out
+
+if FA is None:
+    print("FlashAttention is not found. Using SDPA instead.")
+    FA = sdpa
 
 @torch.compile()
 @torch.autocast(device_type="cuda", dtype=torch.float32)
