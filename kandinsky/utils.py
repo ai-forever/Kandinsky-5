@@ -1,6 +1,5 @@
 import os
 from typing import Optional, Union
-
 import torch
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
@@ -12,13 +11,11 @@ from .models.dit import get_dit
 from .models.text_embedders import get_text_embedder
 from .models.vae import build_vae
 from .models.parallelize import parallelize_dit
-from .t2v_pipeline import Kandinsky5T2VPipeline
-from .magcache_utils import set_magcache_params
+from .t2v_pipeline import KandinskyT2VPipeline
 
 from safetensors.torch import load_file
 
 torch._dynamo.config.suppress_errors = True
-
 
 def get_T2V_pipeline(
     device_map: Union[str, torch.device, dict],
@@ -29,9 +26,7 @@ def get_T2V_pipeline(
     text_encoder2_path: str = None,
     vae_path: str = None,
     conf_path: str = None,
-    offload: bool = False,
-    magcache: bool = False,
-) -> Kandinsky5T2VPipeline:
+) -> KandinskyT2VPipeline:
     assert resolution in [512]
 
     if not isinstance(device_map, dict):
@@ -43,8 +38,6 @@ def get_T2V_pipeline(
         )
     except:
         local_rank, world_size = 0, 1
-
-    assert not (world_size > 1 and offload), "Offloading available only with not parallel inference"
 
     if world_size > 1:
         device_mesh = init_device_mesh(
@@ -58,11 +51,11 @@ def get_T2V_pipeline(
 
     if dit_path is None and conf_path is None:
         dit_path = snapshot_download(
-            repo_id="ai-forever/Kandinsky-5.0-T2V-Lite-sft-5s",
+            repo_id="ai-forever/kandinsky-5",
             allow_patterns="model/*",
             local_dir=cache_dir,
         )
-        dit_path = os.path.join(cache_dir, "model/kandinsky5lite_t2v_sft_5s.safetensors")
+        dit_path = os.path.join(cache_dir, "model/kandinsky_pml.safetensors")
 
     if vae_path is None and conf_path is None:
         vae_path = snapshot_download(
@@ -93,30 +86,33 @@ def get_T2V_pipeline(
     else:
         conf = OmegaConf.load(conf_path)
 
-    text_embedder = get_text_embedder(conf.model.text_embedder)
-    if not offload: 
-        text_embedder = text_embedder.to( device=device_map["text_embedder"]) 
-    
+    text_embedder = get_text_embedder(conf.model.text_embedder).to(
+        device=device_map["text_embedder"]
+    )
     vae = build_vae(conf.model.vae)
-    vae = vae.eval()
-    if not offload:
-        vae = vae.to(device=device_map["vae"]) 
+    vae = vae.eval().to(device=device_map["vae"])
 
     dit = get_dit(conf.model.dit_params)
-
-    if magcache:
-        set_magcache_params(dit, conf.magcache.mag_ratios)
-
     state_dict = load_file(conf.model.checkpoint_path)
-    dit.load_state_dict(state_dict, assign=True)
+    # UPD state dict
+    new_state_dict = {}
+    for key in state_dict:
+        new_key = key
+        if 'out_layer' in key:
+            if 'cross_attention' in key:
+                new_key = key.replace('cross_attention.out_layer', 'out_layer_cross')
+            elif 'self_attention' in key:
+                new_key = key.replace('self_attention.out_layer', 'out_layer_self')
+        new_state_dict[new_key] = state_dict[key]
+    del state_dict
 
-    if not offload:
-        dit = dit.to(device_map["dit"])
+    dit.load_state_dict(new_state_dict)
+    dit = dit.to(device_map["dit"])
 
     if world_size > 1:
         dit = parallelize_dit(dit, device_mesh["tensor_parallel"])
 
-    return Kandinsky5T2VPipeline(
+    return KandinskyT2VPipeline(
         device_map=device_map,
         dit=dit,
         text_embedder=text_embedder,
@@ -125,7 +121,6 @@ def get_T2V_pipeline(
         local_dit_rank=local_rank,
         world_size=world_size,
         conf=conf,
-        offload=offload,
     )
 
 
@@ -183,8 +178,6 @@ def get_default_conf(
             "text_embedder": text_embedder,
             "dit_params": dit_params,
             "attention": attention,
-            "num_steps": 50,
-            "guidance_weight": 5.0,
         },
         "metrics": {"scale_factor": (1, 2, 2)},
         "resolution": 512,

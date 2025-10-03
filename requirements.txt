@@ -1,26 +1,15 @@
-ipykernel
-ipywidgets
-pillow
-packaging
-requests
-anyio
-pydantic
-aiohttp
-websocket-client
-beautifulsoup4
-torch >= 2.8.0
+torch==2.7.0
 torchvision
-transformers >= 4.56.2
 diffusers
-accelerate
+opencv-python
 einops
+sentencepiece
+ninja
+accelerate
+numpy
 imageio
 imageio-ffmpeg
-opencv-python
-pytest
-sentencepiece
 tqdm
 av
 omegaconf
-ninja
-numpy
+transformers==4.49.0

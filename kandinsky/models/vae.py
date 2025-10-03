@@ -685,10 +685,10 @@ class HunyuanVideoDecoder3D(nn.Module):
         hidden_states = self.conv_in(hidden_states)
 
         hidden_states = self.mid_block(hidden_states)
-
-        for up_block in self.up_blocks:
+        
+        for i, up_block in enumerate(self.up_blocks):
             hidden_states = up_block(hidden_states)
-
+            
         hidden_states = self.conv_norm_out(hidden_states)
         hidden_states = self.conv_act(hidden_states)
         hidden_states = self.conv_out(hidden_states)
@@ -876,7 +876,7 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
 
         return DecoderOutput(sample=dec)
 
-    @apply_forward_hook
+    # @apply_forward_hook
     def decode(
         self, z: torch.Tensor, return_dict: bool = True
     ) -> Union[DecoderOutput, torch.Tensor]:
