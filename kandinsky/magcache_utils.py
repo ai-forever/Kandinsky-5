@@ -1,3 +1,4 @@
+# This is an adaptation of Magcache from https://github.com/Zehong-Ma/MagCache/
 import numpy as np
 import torch
 
