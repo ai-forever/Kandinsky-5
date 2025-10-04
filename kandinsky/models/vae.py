@@ -181,23 +181,26 @@ class HunyuanVideoUpsampleCausal3D(nn.Module):
         self.conv = HunyuanVideoCausalConv3d(
             in_channels, out_channels, kernel_size, stride, bias=bias
         )
-
+    @torch.compile(dynamic=True)
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         num_frames = hidden_states.size(2)
-
+        dtp = hidden_states.dtype
         first_frame, other_frames = hidden_states.split((1, num_frames - 1), dim=2)
         first_frame = F.interpolate(
             first_frame.squeeze(2),
             scale_factor=self.upsample_factor[1:],
             mode="nearest",
-        ).unsqueeze(2)
+        ).unsqueeze(2).to(dtp) #force cast
 
         if num_frames > 1:
             other_frames = other_frames.contiguous()
             other_frames = F.interpolate(
                 other_frames, scale_factor=self.upsample_factor, mode="nearest"
-            )
+            ).to(dtp) # force cast
             hidden_states = torch.cat((first_frame, other_frames), dim=2)
+            del first_frame
+            del other_frames
+            torch.cuda.empty_cache()
         else:
             hidden_states = first_frame
 
@@ -254,23 +257,24 @@ class HunyuanVideoResnetBlockCausal3D(nn.Module):
             self.conv_shortcut = HunyuanVideoCausalConv3d(
                 in_channels, out_channels, 1, 1, 0
             )
-
+    @torch.compile(dynamic=True)
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        dtp = hidden_states.dtype
         hidden_states = hidden_states.contiguous()
         residual = hidden_states
 
-        hidden_states = self.norm1(hidden_states)
+        hidden_states = self.norm1(hidden_states).to(dtp) #force cast
         hidden_states = self.nonlinearity(hidden_states)
         hidden_states = self.conv1(hidden_states)
 
-        hidden_states = self.norm2(hidden_states)
+        hidden_states = self.norm2(hidden_states).to(dtp) #force cast
         hidden_states = self.nonlinearity(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.conv2(hidden_states)
 
         if self.conv_shortcut is not None:
             residual = self.conv_shortcut(residual)
-
+        
         hidden_states = hidden_states + residual
         return hidden_states
 
@@ -570,7 +574,6 @@ class HunyuanVideoEncoder3D(nn.Module):
             block_out_channels[-1], conv_out_channels, kernel_size=3
         )
 
-    # @torch.compile(dynamic=True)
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         hidden_states = self.conv_in(hidden_states)
 
@@ -682,6 +685,7 @@ class HunyuanVideoDecoder3D(nn.Module):
         )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        dtp = hidden_states.dtype
         hidden_states = self.conv_in(hidden_states)
 
         hidden_states = self.mid_block(hidden_states)
@@ -690,7 +694,7 @@ class HunyuanVideoDecoder3D(nn.Module):
             hidden_states = up_block(hidden_states)
 
         hidden_states = self.conv_norm_out(hidden_states)
-        hidden_states = self.conv_act(hidden_states)
+        hidden_states = self.conv_act(hidden_states).to(dtp) # force cast
         hidden_states = self.conv_out(hidden_states)
 
         return hidden_states
