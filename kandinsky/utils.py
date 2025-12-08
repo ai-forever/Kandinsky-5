@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 
+import modelopt.torch.opt as mto
+
 from huggingface_hub import hf_hub_download, snapshot_download
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
@@ -50,6 +52,8 @@ def get_T2V_pipeline(
     quantized_qwen: bool = False,
     text_token_padding: bool = False,
     attention_engine: str = "auto",
+    model_type: str = "base",  # "base" or "quantized"
+    quantized_model_path: str = "kandinsky-5/K5Pro_nvfp4.pth",  # Путь к квантованным весам
 ) -> Kandinsky5T2VPipeline:
     if not isinstance(device_map, dict):
         device_map = {"dit": device_map, "vae": device_map, "text_embedder": device_map}
@@ -141,8 +145,16 @@ def get_T2V_pipeline(
             no_cfg = True
         set_magcache_params(dit, mag_ratios, num_steps, no_cfg)
 
-    state_dict = load_file(conf.model.checkpoint_path, device='cpu')
-    dit.load_state_dict(state_dict, assign=True)
+    if model_type == "base":
+        print(f"Loading BASE model weights from: {conf.model.checkpoint_path}")
+        state_dict = load_file(conf.model.checkpoint_path, device='cpu')
+        dit.load_state_dict(state_dict, assign=True)
+    elif model_type == "quantized":
+        print(f"Loading QUANTIZED model weights from: {quantized_model_path}")
+        dit = mto.restore(dit, quantized_model_path, map_location='cpu')
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}. Must be 'base' or 'quantized'")
+    torch.cuda.empty_cache()
 
     if world_size > 1:
         from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard
@@ -188,6 +200,8 @@ def get_I2V_pipeline(
     quantized_qwen: bool = False,
     text_token_padding: bool = False,
     attention_engine: str = "auto",
+    model_type: str = "base",  # "base" or "quantized"
+    quantized_model_path: str = "kandinsky-5/K5Pro_nvfp4.pth",  # Путь к квантованным весам
 ) -> Kandinsky5T2VPipeline:
     if not isinstance(device_map, dict):
         device_map = {"dit": device_map, "vae": device_map, "text_embedder": device_map}
@@ -278,8 +292,16 @@ def get_I2V_pipeline(
             no_cfg = True
         set_magcache_params(dit, mag_ratios, num_steps, no_cfg)
 
-    state_dict = load_file(conf.model.checkpoint_path, device='cpu')
-    dit.load_state_dict(state_dict, assign=True)
+    if model_type == "base":
+        print(f"Loading BASE model weights from: {conf.model.checkpoint_path}")
+        state_dict = load_file(conf.model.checkpoint_path, device='cpu')
+        dit.load_state_dict(state_dict, assign=True)
+    elif model_type == "quantized":
+        print(f"Loading QUANTIZED model weights from: {quantized_model_path}")
+        dit = mto.restore(dit, quantized_model_path, map_location='cpu')
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}. Must be 'base' or 'quantized'")
+    torch.cuda.empty_cache()
 
     if world_size > 1:
         from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard

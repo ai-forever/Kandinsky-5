@@ -131,7 +131,7 @@ class DiffusionTransformer3D(nn.Module):
 
         self.out_layer = OutLayer(model_dim, time_dim, out_visual_dim, patch_size)
 
-    #@torch.compile()
+    @torch.compile()
     def before_text_transformer_blocks(self, text_embed, time, pooled_text_embed, x,
                                        text_rope_pos):
         text_embed = self.text_embeddings(text_embed)
