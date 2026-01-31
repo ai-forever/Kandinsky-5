@@ -1,24 +1,30 @@
 {
   "id": "12380645-f2b5-4537-88ad-dd959a44e47c",
   "revision": 0,
-  "last_node_id": 89,
-  "last_link_id": 235,
+  "last_node_id": 91,
+  "last_link_id": 240,
   "nodes": [
     {
       "id": 71,
       "type": "Kandinsky5LoadTextEmbedders",
       "pos": [
-        -716.360627758001,
-        85.48385073033472
+        -826.3459396140963,
+        57.7046668155807
       ],
       "size": [
         340.20001220703125,
         106
       ],
       "flags": {},
-      "order": 0,
+      "order": 4,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "gen_type",
+          "type": "ENUM",
+          "link": 240
+        }
+      ],
       "outputs": [
         {
           "name": "model",
@@ -39,22 +45,59 @@
       "widgets_values": [
         "text_encoder",
         "text_encoder2",
-        true
+        false
       ]
+    },
+    {
+      "id": 90,
+      "type": "Kandinsky5I2IResize",
+      "pos": [
+        -651.8711329366506,
+        623.014798928724
+      ],
+      "size": [
+        176.413671875,
+        26
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 236
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            237,
+            238,
+            239
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5I2IResize"
+      },
+      "widgets_values": []
     },
     {
       "id": 72,
       "type": "Kandinsky5TextEncode",
       "pos": [
-        -333.78772332723287,
-        180.72114067332257
+        -390.51037960342666,
+        178.13672834177245
       ],
       "size": [
         400,
         200
       ],
       "flags": {},
-      "order": 7,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -71,7 +114,7 @@
           "name": "image",
           "shape": 7,
           "type": "IMAGE",
-          "link": 234
+          "link": 238
         },
         {
           "name": "extended_text",
@@ -108,88 +151,83 @@
       ]
     },
     {
-      "id": 81,
-      "type": "SaveImage",
+      "id": 73,
+      "type": "Kandinsky5TextEncode",
       "pos": [
-        393.20361769253134,
-        93.10675170657473
+        -414.9194332171068,
+        442.6363605729753
       ],
       "size": [
-        313.490234375,
-        270
+        400,
+        200
       ],
       "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 180
-        }
-      ],
-      "outputs": [],
-      "properties": {},
-      "widgets_values": [
-        "ComfyUI"
-      ]
-    },
-    {
-      "id": 77,
-      "type": "Kandinsky5VAEDecode",
-      "pos": [
-        416.5794031564714,
-        -66.22417233856807
-      ],
-      "size": [
-        239.40000915527344,
-        46
-      ],
-      "flags": {},
-      "order": 9,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 186
+          "link": 147
         },
         {
-          "name": "latent",
-          "type": "LATENT",
-          "link": 230
+          "name": "gen_type",
+          "type": "ENUM",
+          "link": 201
+        },
+        {
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 237
+        },
+        {
+          "name": "extended_text",
+          "shape": 7,
+          "type": "PROMPT",
+          "link": null
         }
       ],
       "outputs": [
         {
-          "name": "IMAGE",
-          "type": "IMAGE",
+          "name": "TEXT",
+          "type": "CONDITION",
           "slot_index": 0,
           "links": [
-            180
+            231
+          ]
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "slot_index": 1,
+          "links": [
+            232
           ]
         }
       ],
       "properties": {
-        "Node name for S&R": "Kandinsky5VAEDecode",
+        "Node name for S&R": "Kandinsky5TextEncode",
         "aux_id": "gen-ai-team/kandinsky-5-inference",
         "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
-      "widgets_values": []
+      "widgets_values": [
+        ""
+      ]
     },
     {
       "id": 89,
       "type": "Kandinsky5Generate",
       "pos": [
-        91.7479157162734,
-        232.05071914473905
+        53.37837536620151,
+        237.18819176274135
       ],
       "size": [
         270,
         390
       ],
       "flags": {},
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -254,88 +292,23 @@
         3.5,
         3,
         "bfloat16",
-        1647,
+        1713,
         "randomize"
-      ]
-    },
-    {
-      "id": 73,
-      "type": "Kandinsky5TextEncode",
-      "pos": [
-        -334.8479601445782,
-        442.6363605729753
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 147
-        },
-        {
-          "name": "gen_type",
-          "type": "ENUM",
-          "link": 201
-        },
-        {
-          "name": "image",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 235
-        },
-        {
-          "name": "extended_text",
-          "shape": 7,
-          "type": "PROMPT",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "TEXT",
-          "type": "CONDITION",
-          "slot_index": 0,
-          "links": [
-            231
-          ]
-        },
-        {
-          "name": "POOLED",
-          "type": "CONDITION",
-          "slot_index": 1,
-          "links": [
-            232
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Kandinsky5TextEncode",
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
-      },
-      "widgets_values": [
-        "blurry, low resolution, low quality, jpeg artifacts, noise, grainy, out of focus, distorted, deformed, bad anatomy, bad cluttered background, messy background"
       ]
     },
     {
       "id": 85,
       "type": "Kandinsky5VAEImageEncode",
       "pos": [
-        115.8194718241299,
-        114.51629083025095
+        53.548191110447554,
+        78.82236563590116
       ],
       "size": [
-        225.64609375,
+        234.1431640625,
         66
       ],
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -346,7 +319,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 207
+          "link": 239
         },
         {
           "name": "config",
@@ -372,15 +345,15 @@
       "id": 84,
       "type": "Kandinsky5LoadVAE",
       "pos": [
-        84.13737352914103,
-        -17.64148927437795
+        34.55920203861243,
+        -66.06396662882881
       ],
       "size": [
         270,
         58
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -401,71 +374,88 @@
       ]
     },
     {
-      "id": 74,
-      "type": "Kandinsky5LoadDiT",
+      "id": 77,
+      "type": "Kandinsky5VAEDecode",
       "pos": [
-        -702.0625090060573,
-        -71.74515148335377
+        370.35562547348405,
+        -112.7549903623365
       ],
       "size": [
-        315,
-        98
+        239.40000915527344,
+        46
       ],
       "flags": {},
-      "order": 2,
+      "order": 10,
       "mode": 0,
-      "inputs": [],
-      "outputs": [
+      "inputs": [
         {
           "name": "model",
           "type": "MODEL",
+          "link": 186
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 230
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            222
-          ]
-        },
-        {
-          "name": "conf",
-          "type": "CONFIG",
-          "slot_index": 1,
-          "links": [
-            202,
-            223
-          ]
-        },
-        {
-          "name": "gen_type",
-          "type": "ENUM",
-          "links": [
-            199,
-            201,
-            205,
-            228
+            180
           ]
         }
       ],
       "properties": {
-        "Node name for S&R": "Kandinsky5LoadDiT",
+        "Node name for S&R": "Kandinsky5VAEDecode",
         "aux_id": "gen-ai-team/kandinsky-5-inference",
         "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
+      "widgets_values": []
+    },
+    {
+      "id": 81,
+      "type": "SaveImage",
+      "pos": [
+        356.44939520985247,
+        19.224041702860376
+      ],
+      "size": [
+        313.490234375,
+        270
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 180
+        }
+      ],
+      "outputs": [],
+      "properties": {},
       "widgets_values": [
-        "kandinsky5lite_i2i.safetensors"
+        "ComfyUI"
       ]
     },
     {
       "id": 87,
       "type": "LoadImage",
       "pos": [
-        -732.6398811422852,
-        294.2951484077614
+        -872.2820618947685,
+        247.82577970484
       ],
       "size": [
         325.126953125,
         314
       ],
       "flags": {},
-      "order": 3,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -473,10 +463,8 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            207,
             211,
-            234,
-            235
+            236
           ]
         },
         {
@@ -497,15 +485,15 @@
       "id": 68,
       "type": "expand_prompt",
       "pos": [
-        -336.95129189514716,
-        -61.9520671813866
+        -432.7964876396426,
+        -77.28400791086034
       ],
       "size": [
         400,
         200
       ],
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -547,7 +535,61 @@
         "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8"
       },
       "widgets_values": [
-        "Replace the cat with a husky, leave the rest unchanged"
+        "Replace cat with husky. Leave the rest unchanged"
+      ]
+    },
+    {
+      "id": 74,
+      "type": "Kandinsky5LoadDiT",
+      "pos": [
+        -796.7690617267211,
+        -119.27710356122586
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            222
+          ]
+        },
+        {
+          "name": "conf",
+          "type": "CONFIG",
+          "slot_index": 1,
+          "links": [
+            202,
+            223
+          ]
+        },
+        {
+          "name": "gen_type",
+          "type": "ENUM",
+          "links": [
+            199,
+            201,
+            205,
+            228,
+            240
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5LoadDiT",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "kandinsky5lite_i2i.safetensors"
       ]
     }
   ],
@@ -631,14 +673,6 @@
       72,
       1,
       "ENUM"
-    ],
-    [
-      207,
-      87,
-      0,
-      85,
-      1,
-      "IMAGE"
     ],
     [
       211,
@@ -729,33 +763,58 @@
       "PROMPT"
     ],
     [
-      234,
+      236,
       87,
+      0,
+      90,
+      0,
+      "IMAGE"
+    ],
+    [
+      237,
+      90,
+      0,
+      73,
+      2,
+      "IMAGE"
+    ],
+    [
+      238,
+      90,
       0,
       72,
       2,
       "IMAGE"
     ],
     [
-      235,
-      87,
+      239,
+      90,
       0,
-      73,
-      2,
+      85,
+      1,
       "IMAGE"
+    ],
+    [
+      240,
+      74,
+      2,
+      71,
+      0,
+      "ENUM"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8877261806381966,
+      "scale": 0.8070238005801792,
       "offset": [
-        887.558447475614,
-        226.73403185974087
+        1077.6233224723853,
+        347.8468113447006
       ]
     },
-    "frontendVersion": "1.28.8"
+    "frontendVersion": "1.37.11",
+    "workflowRendererVersion": "LG"
   },
   "version": 0.4
 }

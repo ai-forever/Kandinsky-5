@@ -23,8 +23,11 @@ class Kandinsky5LoadTextEmbedders:
             "required": {
                 "qwen": (os.listdir(folder_paths.get_folder_paths("text_encoders")[0]), {"default": "qwen2_5_vl_7b_instruct"}),
                 "clip": (os.listdir(folder_paths.get_folder_paths("text_encoders")[0]), {"default": "clip_text"}),
-                "qwen_quantized": ("BOOLEAN", {"default": False})
-            }
+                "qwen_quantized": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "gen_type": ("ENUM", {"choices": ["t2i", "i2i", "t2v", "i2v"], "default": "t2v"})
+            },
         }
     RETURN_TYPES = ("MODEL",)
     RETURN_NAMES = ("model",)
@@ -34,10 +37,11 @@ class Kandinsky5LoadTextEmbedders:
 
     DESCRIPTION = "return clip and qwen text embedders"
 
-    def load_te(self, qwen, clip, qwen_quantized):
+    def load_te(self, qwen, clip, qwen_quantized, gen_type=None):
         qwen_path = os.path.join(folder_paths.get_folder_paths("text_encoders")[0],qwen)
         clip_path = os.path.join(folder_paths.get_folder_paths("text_encoders")[0],clip)
-        conf = {'qwen': {'checkpoint_path': qwen_path, 'max_length': 256},
+        max_length = 512 if gen_type == "i2i" else 256
+        conf = {'qwen': {'checkpoint_path': qwen_path, 'max_length': max_length},
             'clip': {'checkpoint_path': clip_path, 'max_length': 77},
         }
         return (Kandinsky5TextEmbedder(DictConfig(conf), device='cuda:0',quantized_qwen=qwen_quantized),)
@@ -115,9 +119,13 @@ class Kandinsky5TextEncode(ComfyNodeABC):
         else:
             type_of_content = "video"
 
-        if not (image is None) and image.ndim == 4:
-            image = image.unsqueeze(0)
-        text_embeds = model.embedder([text], type_of_content=type_of_content, images=image)
+        if image is not None:
+            image = torch.clamp(image * 255.0, 0, 255).to(torch.uint8)
+            images = [image.permute(0,3,1,2),]
+        else:
+            images = None
+
+        text_embeds = model.embedder([text], type_of_content=type_of_content, images=images)
         pooled_embed = model.clip_embedder([text])
         model = model.to('cpu')
         return (text_embeds, pooled_embed)
@@ -167,13 +175,14 @@ class expand_prompt(ComfyNodeABC):
     CATEGORY = "conditioning"
     DESCRIPTION = "extend prompt with."
     def expand_prompt(self, model, prompt, gen_type, image=None, device='cuda:0'):
+        if image is not None:
+            to_pil = transforms.ToPILImage()
+            image = image.squeeze().permute(2,0,1)
+            pil_image = to_pil(image).convert("RGB")
+
         if gen_type in ['i2v', 't2v']:
             if image is not None:
                 print(image.shape)
-                to_pil = transforms.ToPILImage()
-
-                # Convert tensor
-                pil_image = to_pil(image.squeeze(0).permute(2,0,1))  # Remove batch dimension
                 print("i2v expander")
                 messages = [
                     {
@@ -186,13 +195,13 @@ class expand_prompt(ComfyNodeABC):
                             {
                                 "type": "text",
                                 "text": f"""You are a prompt beautifier that transforms short user video descriptions into rich, detailed English prompts specifically optimized for video generation models.
-                Here are some example descriptions from the dataset that the model was trained:
-                1. "Create a video showing a nighttime urban driving scene from inside a car. The driver is focused on the road ahead, with the city lights visible through the windshield. The GPS device on the dashboard continues to display navigation information. The camera remains steady, capturing the interior of the car and the changing street view outside as the vehicle moves forward. The background shifts slightly to show different parts of the cityscape, including illuminated buildings and street signs."
-                2. "Create a video where the character, dressed in historical attire, is seen holding an umbrella with a logo. The character should move closer to the camera while maintaining a steady pace, keeping the umbrella raised. The background remains consistent with a foggy, outdoor setting, but the focus shifts more towards the character as they approach. The lighting should emphasize the details of the costume and the umbrella, enhancing the dramatic effect."
-                3. "Darken the scene while keeping the characters and setting unchanged, emphasizing a serious atmosphere."
-                IImportantly! These are just examples from a large training dataset of 20 mln videos.
-                Rewrite Prompt: "{prompt}" to get high-quality image to video generation from this image. Pay main attention to information about changes of objects.
-                Make prompt dynamic. Answer only with expanded prompt..""",
+Here are some example descriptions from the dataset that the model was trained:
+1. "Create a video showing a nighttime urban driving scene from inside a car. The driver is focused on the road ahead, with the city lights visible through the windshield. The GPS device on the dashboard continues to display navigation information. The camera remains steady, capturing the interior of the car and the changing street view outside as the vehicle moves forward. The background shifts slightly to show different parts of the cityscape, including illuminated buildings and street signs."
+2. "Create a video where the character, dressed in historical attire, is seen holding an umbrella with a logo. The character should move closer to the camera while maintaining a steady pace, keeping the umbrella raised. The background remains consistent with a foggy, outdoor setting, but the focus shifts more towards the character as they approach. The lighting should emphasize the details of the costume and the umbrella, enhancing the dramatic effect."
+3. "Darken the scene while keeping the characters and setting unchanged, emphasizing a serious atmosphere."
+IImportantly! These are just examples from a large training dataset of 20 mln videos.
+Rewrite Prompt: "{prompt}" to get high-quality image to video generation from this image. Pay main attention to information about changes of objects.
+Make prompt dynamic. Answer only with expanded prompt..""",
                             },
                         ],
                     }
@@ -206,12 +215,12 @@ class expand_prompt(ComfyNodeABC):
                             {
                                 "type": "text",
                                 "text": f"""You are a prompt beautifier that transforms short user video descriptions into rich, detailed English prompts specifically optimized for video generation models.
-                Here are some example descriptions from the dataset that the model was trained:
-                1. "In a dimly lit room with a cluttered background, papers are pinned to the wall and various objects rest on a desk. Three men stand present: one wearing a red sweater, another in a black sweater, and the third in a gray shirt. The man in the gray shirt speaks and makes hand gestures, while the other two men look forward. The camera remains stationary, focusing on the three men throughout the sequence. A gritty and realistic visual style prevails, marked by a greenish tint that contributes to a moody atmosphere. Low lighting casts shadows, enhancing the tense mood of the scene."
-                2. "In an office setting, a man sits at a desk wearing a gray sweater and seated in a black office chair. A wooden cabinet with framed pictures stands beside him, alongside a small plant and a lit desk lamp. Engaged in a conversation, he makes various hand gestures to emphasize his points. His hands move in different positions, indicating different ideas or points. The camera remains stationary, focusing on the man throughout. Warm lighting creates a cozy atmosphere. The man appears to be explaining something. The overall visual style is professional and polished, suitable for a business or educational context."
-                3. "A person works on a wooden object resembling a sunburst pattern, holding it in their left hand while using their right hand to insert a thin wire into the gaps between the wooden pieces. The background features a natural outdoor setting with greenery and a tree trunk visible. The camera stays focused on the hands and the wooden object throughout, capturing the detailed process of assembling the wooden structure. The person carefully threads the wire through the gaps, ensuring the wooden pieces are securely fastened together. The scene unfolds with a naturalistic and instructional style, emphasizing the craftsmanship and the methodical steps taken to complete the task."
-                IImportantly! These are just examples from a large training dataset of 200 million videos.
-                Rewrite Prompt: "{prompt}" to get high-quality video generation. Answer only with expanded prompt.""",
+Here are some example descriptions from the dataset that the model was trained:
+1. "In a dimly lit room with a cluttered background, papers are pinned to the wall and various objects rest on a desk. Three men stand present: one wearing a red sweater, another in a black sweater, and the third in a gray shirt. The man in the gray shirt speaks and makes hand gestures, while the other two men look forward. The camera remains stationary, focusing on the three men throughout the sequence. A gritty and realistic visual style prevails, marked by a greenish tint that contributes to a moody atmosphere. Low lighting casts shadows, enhancing the tense mood of the scene."
+2. "In an office setting, a man sits at a desk wearing a gray sweater and seated in a black office chair. A wooden cabinet with framed pictures stands beside him, alongside a small plant and a lit desk lamp. Engaged in a conversation, he makes various hand gestures to emphasize his points. His hands move in different positions, indicating different ideas or points. The camera remains stationary, focusing on the man throughout. Warm lighting creates a cozy atmosphere. The man appears to be explaining something. The overall visual style is professional and polished, suitable for a business or educational context."
+3. "A person works on a wooden object resembling a sunburst pattern, holding it in their left hand while using their right hand to insert a thin wire into the gaps between the wooden pieces. The background features a natural outdoor setting with greenery and a tree trunk visible. The camera stays focused on the hands and the wooden object throughout, capturing the detailed process of assembling the wooden structure. The person carefully threads the wire through the gaps, ensuring the wooden pieces are securely fastened together. The scene unfolds with a naturalistic and instructional style, emphasizing the craftsmanship and the methodical steps taken to complete the task."
+IImportantly! These are just examples from a large training dataset of 200 million videos.
+Rewrite Prompt: "{prompt}" to get high-quality video generation. Answer only with expanded prompt.""",
                             },
                         ],
                     }
@@ -220,8 +229,6 @@ class expand_prompt(ComfyNodeABC):
             if image is not None:
                 print("i2i expander")
                 print(image.shape)
-                to_pil = transforms.ToPILImage()
-                pil_image = to_pil(image.squeeze(0).permute(2,0,1))  # Remove batch dimension
                 messages = [
                     {
                         "role": "user",
@@ -229,14 +236,14 @@ class expand_prompt(ComfyNodeABC):
                             {
                                 "type": "text",
                                 "text": f"""Rewrite and enhance the original editing instruction with richer detail, clearer structure, and improved descriptive quality. When adding text that should appear inside an image, place that text inside double quotes and in capital letters. Explain what needs to be changed and what needs to be left unchanged. Explain in details how to change  camera potision or tell that camera position shouldn't be changed.
-                            example:
-                            Original text: add text 911 and 'Police' 
-                            Result: Add the word "911" in large blue letters to the hood. Below that, add the word "POLICE." Keep the camera position unchanged, as do the background, car position, and lighting.
-                            Rewrite Prompt: "{prompt}". Answer only with expanded prompt.""",
+example:
+Original text: add text 911 and 'Police'
+Result: Add the word "911" in large blue letters to the hood. Below that, add the word "POLICE." Keep the camera position unchanged, as do the background, car position, and lighting.
+Rewrite Prompt: "{prompt}". Answer only with expanded prompt.""",
                             },
                             {
                                 "type": "image",
-                                "image": image,
+                                "image": pil_image,
                             }
                         ],
                     }
@@ -250,11 +257,11 @@ class expand_prompt(ComfyNodeABC):
                             {
                                 "type": "text",
                                 "text": f"""Rewrite and enhance the original prompt with richer detail, clearer structure, and improved descriptive quality. Expand the scene, atmosphere, and context while preserving the user’s intent. When adding text that should appear inside an image, place that text inside double quotes and in capital letters. Strengthen visual clarity, style, and specificity, but do not change the meaning. Output only the enhanced prompt, written in polished, vivid language suitable for high-quality image generation.
-                example:
-                Original text: white mini police car with blue stripes, with 911 and 'Police' text 
-                Result: A miniature model car simulating the official transport of the relevant authorities. The body is white with blue stripes. The word "911" is written in large blue letters on the hood and side. Below it, "POLICE" is used in a font. The windows are transparent, and the interior has black seats. The headlights have plastic lenses, and the roof has blue and red beacons. The radiator grille has vertical slots. The wheels are black with white rims. The doors are closed, the windows have black frames. The background is uniform white.
-                Here 911 in double quotes because it is text on image, 'Police' -> "POLICE" because it should be in double quotes and capital letters.
-                Rewrite Prompt: "{prompt}". Answer only with expanded prompt.""",
+example:
+Original text: white mini police car with blue stripes, with 911 and 'Police' text
+Result: A miniature model car simulating the official transport of the relevant authorities. The body is white with blue stripes. The word "911" is written in large blue letters on the hood and side. Below it, "POLICE" is used in a font. The windows are transparent, and the interior has black seats. The headlights have plastic lenses, and the roof has blue and red beacons. The radiator grille has vertical slots. The wheels are black with white rims. The doors are closed, the windows have black frames. The background is uniform white.
+Here 911 in double quotes because it is text on image, 'Police' -> "POLICE" because it should be in double quotes and capital letters.
+Rewrite Prompt: "{prompt}". Answer only with expanded prompt.""",
                             },
                         ],
                     }
@@ -358,7 +365,7 @@ class Kandinsky5Generate(ComfyNodeABC):
             img = torch.cat([img, image_latent],dim=-1)
 
         first_frames = image_latent if gen_type == 'i2v' else None
-        
+    
         with torch.no_grad():
             with torch.autocast(device_type='cuda', dtype=autocast_type):
                 latent_visual = generate(
@@ -394,8 +401,10 @@ class Kandinsky5VAEDecode(ComfyNodeABC):
     def decode(self, model, latent):
         device = 'cuda:0'
         model = model.to(device)
+        autocast_type = torch.float16 if isinstance(model, AutoencoderKLHunyuanVideo) else torch.bfloat16
+
         with torch.no_grad():
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=autocast_type):
                 bs = 1
                 images = latent.reshape(bs, -1, latent.shape[-3], latent.shape[-2], latent.shape[-1])# bs, t, h, w, c
                 # shape for decode: bs, c, t, h, w
@@ -430,12 +439,11 @@ class Kandinsky5VAEImageEncode(ComfyNodeABC):
     def encode(self, model, image, config):
         device = 'cuda:0'
         model = model.to(device)
-        divisibility = 1024 if config.model.attention.type == "nabla" else 16
-        if getattr(config.model.dit_params, 'instruct_type', None) == 'channel':
-            height, width = find_nearest(Kandinsky5I2IPipeline.RESOLUTIONS[1024], image.shape[1:3])
-            image = resize_video(image.permute(0,3,1,2), (height, width))
-        else:
+        if getattr(config.model.dit_params, 'instruct_type', None) != 'channel':
+            divisibility = 1024 if config.model.attention.type == "nabla" else 16
             image, k = resize_image(image.permute(0,3,1,2), max_area=512*768, divisibility=divisibility)
+        else:
+            image = image.permute(0,3,1,2)
         image = image * 2.0 - 1.
 
         with torch.no_grad():
@@ -450,6 +458,26 @@ class Kandinsky5VAEImageEncode(ComfyNodeABC):
 
         model = model.to('cpu')
         return (lat_image,)
+    
+
+class Kandinsky5I2IResize(ComfyNodeABC):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "image": ("IMAGE", {"tooltip": "image."}), },
+        }
+    RETURN_TYPES = ("IMAGE",)
+    OUTPUT_TOOLTIPS = ("The resized image.",)
+    FUNCTION = "resize"
+    CATEGORY = "image"
+    DESCRIPTION = "Resizes image to size required by Image2Image model."
+
+    def resize(self,image):
+        height, width = find_nearest(Kandinsky5I2IPipeline.RESOLUTIONS[1024], image.shape[1:3])
+        image = resize_video(image.permute(0,3,1,2), (height, width))
+        image = image.permute(0,2,3,1)
+        return (image,)
 
 NODE_CLASS_MAPPINGS = {
     "Kandinsky5LoadTextEmbedders": Kandinsky5LoadTextEmbedders,
@@ -459,6 +487,7 @@ NODE_CLASS_MAPPINGS = {
     "Kandinsky5VAEDecode": Kandinsky5VAEDecode,
     "Kandinsky5VAEImageEncode": Kandinsky5VAEImageEncode,
     "Kandinsky5LoadDiT": Kandinsky5LoadDiT,
+    "Kandinsky5I2IResize": Kandinsky5I2IResize,
     "expand_prompt": expand_prompt
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -469,6 +498,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Kandinsky5VAEDecode": "Kandinsky5VAEDecode",
     "Kandinsky5VAEImageEncode": "Kandinsky5VAEImageEncode",
     "Kandinsky5LoadDiT": "Kandinsky5LoadDiT",
-    "expand_prompt": "expand_prompt"
-
+    "expand_prompt": "expand_prompt",
+    "Kandinsky5I2IResize": "Kandinsky5I2IResize"
 }
