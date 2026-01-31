@@ -70,128 +70,6 @@
       ]
     },
     {
-      "id": 73,
-      "type": "Kandinsky5TextEncode",
-      "pos": [
-        179.4368133544922,
-        406.9901428222656
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 147
-        },
-        {
-          "name": "gen_type",
-          "type": "ENUM",
-          "link": 202
-        },
-        {
-          "name": "image",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": null
-        },
-        {
-          "name": "extended_text",
-          "shape": 7,
-          "type": "PROMPT",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "TEXT",
-          "type": "CONDITION",
-          "slot_index": 0,
-          "links": [
-            197
-          ]
-        },
-        {
-          "name": "POOLED",
-          "type": "CONDITION",
-          "slot_index": 1,
-          "links": [
-            198
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Kandinsky5TextEncode",
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
-      },
-      "widgets_values": [
-        "blurry, low resolution, low quality, jpeg artifacts, noise, grainy, out of focus, distorted, deformed, bad anatomy, bad cluttered background, messy background"
-      ]
-    },
-    {
-      "id": 68,
-      "type": "expand_prompt",
-      "pos": [
-        -281.05573515567386,
-        269.1219340950637
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 139
-        },
-        {
-          "name": "gen_type",
-          "type": "ENUM",
-          "link": 201
-        },
-        {
-          "name": "image",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "exp_prompt",
-          "type": "PROMPT",
-          "slot_index": 0,
-          "links": [
-            163
-          ]
-        },
-        {
-          "name": "log",
-          "type": "STRING",
-          "slot_index": 1,
-          "links": []
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "expand_prompt",
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8"
-      },
-      "widgets_values": [
-        "Crocodile flying at the space "
-      ]
-    },
-    {
       "id": 71,
       "type": "Kandinsky5LoadTextEmbedders",
       "pos": [
@@ -205,7 +83,14 @@
       "flags": {},
       "order": 0,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "gen_type",
+          "shape": 7,
+          "type": "ENUM",
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "model",
@@ -389,7 +274,7 @@
         5,
         10,
         "bfloat16",
-        1880,
+        227,
         "randomize"
       ]
     },
@@ -435,6 +320,128 @@
         "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
       },
       "widgets_values": []
+    },
+    {
+      "id": 73,
+      "type": "Kandinsky5TextEncode",
+      "pos": [
+        179.4368133544922,
+        406.9901428222656
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 147
+        },
+        {
+          "name": "gen_type",
+          "type": "ENUM",
+          "link": 202
+        },
+        {
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "extended_text",
+          "shape": 7,
+          "type": "PROMPT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TEXT",
+          "type": "CONDITION",
+          "slot_index": 0,
+          "links": [
+            197
+          ]
+        },
+        {
+          "name": "POOLED",
+          "type": "CONDITION",
+          "slot_index": 1,
+          "links": [
+            198
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5TextEncode",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 68,
+      "type": "expand_prompt",
+      "pos": [
+        -281.05573515567386,
+        269.1219340950637
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 139
+        },
+        {
+          "name": "gen_type",
+          "type": "ENUM",
+          "link": 201
+        },
+        {
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "exp_prompt",
+          "type": "PROMPT",
+          "slot_index": 0,
+          "links": [
+            163
+          ]
+        },
+        {
+          "name": "log",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "expand_prompt",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8"
+      },
+      "widgets_values": [
+        "A crocodile flies in space"
+      ]
     },
     {
       "id": 81,
@@ -606,13 +613,14 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.549959245895997,
+      "scale": 0.7319957562875726,
       "offset": [
-        1358.2601888415065,
-        231.0797833924834
+        742.3001205143622,
+        297.6995753971031
       ]
     },
-    "frontendVersion": "1.28.8"
+    "frontendVersion": "1.37.11",
+    "workflowRendererVersion": "LG"
   },
   "version": 0.4
 }
