@@ -50,6 +50,8 @@ def get_video_pipeline(
     text_token_padding: bool = False,
     attention_engine: str = "auto",
     mode: str = None,
+    model_type: str = "base",  # "base" or "fp8"
+    quantized_model_path: str = "/data/kandinsky-5/weights/K5_pro_5s_ao.pt",  # Путь к квантованным весам
 ):
     if not isinstance(device_map, dict):
         device_map = {"dit": device_map, "vae": device_map, "text_embedder": device_map}
@@ -136,8 +138,14 @@ def get_video_pipeline(
             no_cfg = True
         set_magcache_params(dit, mag_ratios, num_steps, no_cfg)
 
-    state_dict = load_file(conf.model.checkpoint_path, device='cpu')
-    dit.load_state_dict(state_dict, assign=True)
+    if model_type == "base":
+        print(f"Loading BASE model weights from: {conf.model.checkpoint_path}")
+        state_dict = load_file(conf.model.checkpoint_path, device='cpu')
+        dit.load_state_dict(state_dict, assign=True)
+    elif model_type == "fp8":
+        print(f"Loading QUANTIZED FP8 Full model weights from: {quantized_model_path}")
+        state_dict = torch.load(quantized_model_path)
+        dit.load_state_dict(state_dict, assign=True)
 
     if not offload and world_size == 1:
         dit = dit.to(device_map["dit"])
