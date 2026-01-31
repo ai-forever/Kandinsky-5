@@ -95,7 +95,14 @@
       "flags": {},
       "order": 0,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "gen_type",
+          "shape": 7,
+          "type": "ENUM",
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "model",
@@ -192,11 +199,11 @@
         681.7356567382812
       ],
       "size": [
-        225.64609375,
+        234.1431640625,
         66
       ],
       "flags": {},
-      "order": 4,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -241,7 +248,7 @@
         200
       ],
       "flags": {},
-      "order": 6,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
@@ -374,8 +381,96 @@
         5,
         10,
         "bfloat16",
-        800,
+        1658,
         "randomize"
+      ]
+    },
+    {
+      "id": 76,
+      "type": "Kandinsky5LoadVAE",
+      "pos": [
+        612.3971557617188,
+        23.200862884521484
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            155,
+            166
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5LoadVAE",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "hunyan_vae"
+      ]
+    },
+    {
+      "id": 74,
+      "type": "Kandinsky5LoadDiT",
+      "pos": [
+        208.43588256835938,
+        27.57303810119629
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            149
+          ]
+        },
+        {
+          "name": "conf",
+          "type": "CONFIG",
+          "slot_index": 1,
+          "links": [
+            162,
+            176
+          ]
+        },
+        {
+          "name": "gen_type",
+          "type": "ENUM",
+          "links": [
+            171,
+            173,
+            174,
+            175
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Kandinsky5LoadDiT",
+        "aux_id": "gen-ai-team/kandinsky-5-inference",
+        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
+      },
+      "widgets_values": [
+        "kandinsky5lite_i2v_5s.safetensors"
       ]
     },
     {
@@ -432,7 +527,7 @@
         "ver": "ef383d80876b498f553b13c8ae99d423308b0aa8"
       },
       "widgets_values": [
-        "Dragon breaths fire"
+        "The bear plays balalaika."
       ]
     },
     {
@@ -447,7 +542,7 @@
         314
       ],
       "flags": {},
-      "order": 1,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -469,96 +564,8 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "347491199578880.jpeg",
+        "test_image.jpg",
         "image"
-      ]
-    },
-    {
-      "id": 76,
-      "type": "Kandinsky5LoadVAE",
-      "pos": [
-        612.3971557617188,
-        23.200862884521484
-      ],
-      "size": [
-        315,
-        58
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "slot_index": 0,
-          "links": [
-            155,
-            166
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Kandinsky5LoadVAE",
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
-      },
-      "widgets_values": [
-        "hunyan_vae"
-      ]
-    },
-    {
-      "id": 74,
-      "type": "Kandinsky5LoadDiT",
-      "pos": [
-        208.43588256835938,
-        27.57303810119629
-      ],
-      "size": [
-        315,
-        98
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "slot_index": 0,
-          "links": [
-            149
-          ]
-        },
-        {
-          "name": "conf",
-          "type": "CONFIG",
-          "slot_index": 1,
-          "links": [
-            162,
-            176
-          ]
-        },
-        {
-          "name": "gen_type",
-          "type": "ENUM",
-          "links": [
-            171,
-            173,
-            174,
-            175
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Kandinsky5LoadDiT",
-        "aux_id": "gen-ai-team/kandinsky-5-inference",
-        "ver": "8ad75bc185e5d43004e1468789a11fc6450cdb2b"
-      },
-      "widgets_values": [
-        "kandinsky5lite_i2v_5s.safetensors"
       ]
     }
   ],
@@ -746,11 +753,12 @@
     "ds": {
       "scale": 0.885780500000001,
       "offset": [
-        374.1044841313119,
-        71.48689965117737
+        419.32427568273164,
+        122.46495232927796
       ]
     },
-    "frontendVersion": "1.28.8"
+    "frontendVersion": "1.37.11",
+    "workflowRendererVersion": "LG"
   },
   "version": 0.4
 }
