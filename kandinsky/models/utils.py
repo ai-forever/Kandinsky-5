@@ -32,12 +32,12 @@ def fractal_flatten(x, rope, shape, block_mask=False):
     if block_mask:
         pixel_size = 8
         x = local_patching(x, shape, (1, pixel_size, pixel_size), dim=0)
-        rope = local_patching(rope, shape, (1, pixel_size, pixel_size), dim=0)
+        # rope = local_patching(rope, shape, (1, pixel_size, pixel_size), dim=0)
         x = x.flatten(0, 1)
-        rope = rope.flatten(0, 1)
+        # rope = rope.flatten(0, 1)
     else:
         x = x.flatten(0, 2)
-        rope = rope.flatten(0, 2)
+        # rope = rope.flatten(0, 2)
     return x, rope
 
 

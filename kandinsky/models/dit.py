@@ -5,8 +5,8 @@ from .nn import (
     TimeEmbeddings,
     TextEmbeddings,
     VisualEmbeddings,
-    RoPE1D,
-    RoPE3D,
+    # RoPE1D,
+    # RoPE3D,
     Modulation,
     MultiheadSelfAttentionEnc,
     MultiheadSelfAttentionDec,
@@ -45,12 +45,12 @@ class TransformerEncoderBlock(nn.Module):
 
 
 class TransformerDecoderBlock(nn.Module):
-    def __init__(self, model_dim, time_dim, ff_dim, head_dim, attention_engine="auto", text_token_padding=False):
+    def __init__(self, model_dim, time_dim, ff_dim, head_dim, axes_dims, attention_engine="auto", text_token_padding=False):
         super().__init__()
         self.visual_modulation = Modulation(time_dim, model_dim, 9)
 
         self.self_attention_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
-        self.self_attention = MultiheadSelfAttentionDec(model_dim, head_dim, attention_engine)
+        self.self_attention = MultiheadSelfAttentionDec(model_dim, head_dim, axes_dims, attention_engine)
 
         self.cross_attention_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.cross_attention = MultiheadCrossAttention(model_dim, head_dim, attention_engine,text_token_padding)
@@ -58,13 +58,13 @@ class TransformerDecoderBlock(nn.Module):
         self.feed_forward_norm = nn.LayerNorm(model_dim, elementwise_affine=False)
         self.feed_forward = FeedForward(model_dim, ff_dim)
 
-    def forward(self, visual_embed, text_embed, time_embed, rope, sparse_params, attention_mask=None):
+    def forward(self, visual_embed, text_embed, time_embed, visual_shape, sparse_params, attention_mask=None):
         self_attn_params, cross_attn_params, ff_params = torch.chunk(
             self.visual_modulation(time_embed), 3, dim=-1
         )
         shift, scale, gate = torch.chunk(self_attn_params, 3, dim=-1)
         visual_out = apply_scale_shift_norm(self.self_attention_norm, visual_embed, scale, shift)
-        visual_out = self.self_attention(visual_out, rope, sparse_params)
+        visual_out = self.self_attention(visual_out, visual_shape, sparse_params)
         visual_embed = apply_gate_sum(visual_embed, visual_out, gate)
 
         shift, scale, gate = torch.chunk(cross_attn_params, 3, dim=-1)
@@ -113,7 +113,7 @@ class DiffusionTransformer3D(nn.Module):
         self.pooled_text_embeddings = TextEmbeddings(in_text_dim2, time_dim)
         self.visual_embeddings = VisualEmbeddings(visual_embed_dim, model_dim, patch_size)
 
-        self.text_rope_embeddings = RoPE1D(head_dim)
+        #self.text_rope_embeddings = RoPE1D(head_dim)
         self.text_transformer_blocks = nn.ModuleList(
             [
                 TransformerEncoderBlock(model_dim, time_dim, ff_dim, head_dim, attention_engine, text_token_padding)
@@ -121,10 +121,10 @@ class DiffusionTransformer3D(nn.Module):
             ]
         )
 
-        self.visual_rope_embeddings = RoPE3D(axes_dims)
+        #self.visual_rope_embeddings = RoPE3D(axes_dims)
         self.visual_transformer_blocks = nn.ModuleList(
             [
-                TransformerDecoderBlock(model_dim, time_dim, ff_dim, head_dim, attention_engine, text_token_padding)
+                TransformerDecoderBlock(model_dim, time_dim, ff_dim, head_dim, axes_dims, attention_engine, text_token_padding)
                 for _ in range(num_visual_blocks)
             ]
         )
@@ -138,14 +138,16 @@ class DiffusionTransformer3D(nn.Module):
         time_embed = self.time_embeddings(time)
         time_embed = time_embed + self.pooled_text_embeddings(pooled_text_embed)
         visual_embed = self.visual_embeddings(x)
-        text_rope = self.text_rope_embeddings(text_rope_pos)
+        #text_rope = self.text_rope_embeddings(text_rope_pos)
+        text_rope = None
         return text_embed, time_embed, text_rope, visual_embed
 
     @torch.compile()
     def before_visual_transformer_blocks(self, visual_embed, visual_rope_pos, scale_factor,
                                          sparse_params):
         visual_shape = visual_embed.shape[:-1]
-        visual_rope = self.visual_rope_embeddings(visual_shape, visual_rope_pos, scale_factor)
+        # visual_rope = self.visual_rope_embeddings(visual_shape, visual_rope_pos, scale_factor)
+        visual_rope = None
         to_fractal = sparse_params["to_fractal"] if sparse_params is not None else False
         visual_embed, visual_rope = fractal_flatten(visual_embed, visual_rope, visual_shape,
                                                     block_mask=to_fractal)
@@ -179,7 +181,7 @@ class DiffusionTransformer3D(nn.Module):
 
         for visual_transformer_block in self.visual_transformer_blocks:
             visual_embed = visual_transformer_block(visual_embed, text_embed, time_embed,
-                                                    visual_rope, sparse_params, attention_mask)
+                                                    visual_shape, sparse_params, attention_mask)
 
         x = self.after_blocks(visual_embed, visual_shape, to_fractal, text_embed, time_embed)
         return x

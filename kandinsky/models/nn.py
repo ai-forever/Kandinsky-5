@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn.attention.flex_attention import flex_attention
+from flash_attn.layers.rotary import RotaryEmbedding
 
 from .utils import get_freqs, nablaT_v2
 from .attention import SelfAttentionEngine
@@ -161,6 +162,7 @@ class MultiheadSelfAttentionEnc(nn.Module):
         self.to_value = nn.Linear(num_channels, num_channels, bias=True)
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
+        self.rotary = RotaryEmbedding(dim=head_dim, base=10000.0, interleaved=True, scale_base=None, device="cuda")
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
         if text_token_padding:
@@ -202,15 +204,25 @@ class MultiheadSelfAttentionEnc(nn.Module):
     def forward(self, x, rope, attention_mask=None):
         query, key, value = self.get_qkv(x)
         query, key = self.norm_qk(query, key)
-        query = apply_rotary(query, rope).type_as(query)
-        key = apply_rotary(key, rope).type_as(key)
-
+        # query = apply_rotary(query, rope).type_as(query)
+        # key = apply_rotary(key, rope).type_as(key)
+        query, key, value = self.rotary(torch.stack([query,key,value], dim=2)).unbind(dim=2)
         out = self.scaled_dot_product_attention(query, key, value, attention_mask)
         out = self.out_l(out)
         return out
 
+class ScaledRotaryEmbedding(RotaryEmbedding):
+    def __init__(self, dim, base=10000.0, scale=1.0, interleaved=False, device=None):
+        super().__init__(dim=dim, base=base, interleaved=interleaved, device=device)
+        with torch.no_grad():
+            self.inv_freq = self.inv_freq / scale
+        if hasattr(self, '_cos_cached'):
+            del self._cos_cached
+        if hasattr(self, '_sin_cached'):
+            del self._sin_cached
+
 class MultiheadSelfAttentionDec(nn.Module):
-    def __init__(self, num_channels, head_dim, attention_engine="auto"):
+    def __init__(self, num_channels, head_dim, axes_dims, attention_engine="auto"):
         super().__init__()
         assert num_channels % head_dim == 0
         self.num_heads = num_channels // head_dim
@@ -222,6 +234,10 @@ class MultiheadSelfAttentionDec(nn.Module):
         self.key_norm = nn.RMSNorm(head_dim)
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
+        self.rotary_t = ScaledRotaryEmbedding(dim=axes_dims[0], base=10000.0, interleaved=True, scale=1.0, device="cuda")
+        self.rotary_h = ScaledRotaryEmbedding(dim=axes_dims[1], base=10000.0, interleaved=True, scale=2.0, device="cuda")
+        self.rotary_w = ScaledRotaryEmbedding(dim=axes_dims[2], base=10000.0, interleaved=True, scale=2.0, device="cuda")
+        self.axes_dims = axes_dims
 
         self.attn_engine = SelfAttentionEngine(attention_engine)
 
@@ -279,13 +295,44 @@ class MultiheadSelfAttentionDec(nn.Module):
     def out_l(self, x):
         return self.out_layer(x)
 
-    def forward(self, x, rope, sparse_params=None):
+    def forward(self, x, visual_shape, sparse_params=None):
+        T, H, W = visual_shape
+        seq_len = T * H * W
+
         query, key, value = self.get_qkv(x)
         query, key = self.norm_qk(query, key)
+        n_heads = query.shape[-2]
+        t_rot, h_rot, w_rot = self.axes_dims
+        q_t, q_h, q_w = torch.split(query, [t_rot, h_rot, w_rot], dim=-1)
+        k_t, k_h, k_w = torch.split(key, [t_rot, h_rot, w_rot], dim=-1)
+        v_t, v_h, v_w = torch.split(value, [t_rot, h_rot, w_rot], dim=-1)
 
-        query = apply_rotary(query, rope).type_as(query)
-        key = apply_rotary(key, rope).type_as(key)
+        qkv_t = torch.stack([q_t, k_t, v_t],dim=2)
+        qkv_h = torch.stack([q_h, k_h, v_h],dim=2)
+        qkv_w = torch.stack([q_w, k_w, v_w],dim=2)
 
+        # T
+        qkv_t = qkv_t.view(1, T, H, W, 3, n_heads, t_rot)
+        qkv_t = qkv_t.permute(0, 2, 3, 1, 4, 5, 6).flatten(0,2)
+        qkv_t = self.rotary_t(qkv_t)
+        qkv_t = qkv_t.view(1, H, W, T, 3, n_heads, t_rot).permute(0, 3, 1, 2, 4, 5, 6)
+        qkv_t = qkv_t.flatten(1,3)
+
+        # H
+        qkv_h = qkv_h.view(1, T, H, W, 3, n_heads, h_rot)
+        qkv_h = qkv_h.permute(0, 1, 3, 2, 4, 5, 6).flatten(0,2)
+        qkv_h = self.rotary_h(qkv_h)
+        qkv_h = qkv_h.view(1, T, W, H, 3, n_heads, h_rot).permute(0, 1, 3, 2, 4, 5, 6)
+        qkv_h = qkv_h.flatten(1,3)
+
+        # W
+        qkv_w = qkv_w.view(1, T, H, W, 3, n_heads, w_rot).flatten(0,2)
+        qkv_w = self.rotary_w(qkv_w)
+        qkv_w = qkv_w.reshape(1, seq_len, 3, n_heads, w_rot)
+
+        qkv_fa = torch.cat([qkv_t, qkv_h, qkv_w], dim=-1)
+        query, key, value = torch.unbind(qkv_fa, dim=2)
+        
         if sparse_params is not None:
             out = self.nabla(query, key, value, sparse_params=sparse_params)
         else:
