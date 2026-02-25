@@ -5,19 +5,19 @@ from torch.nn.attention.flex_attention import flex_attention
 try:
     from flash_attn import flash_attn_func as flash_attention_2
     print("FlashAttention 2 is found")
-except:
+except ImportError:
     flash_attention_2 = None
 
 try:
     from flash_attn_interface import flash_attn_func as flash_attention_3
     print("FlashAttention 3 is found")
-except:
+except ImportError:
     flash_attention_3 = None
 
 try:
     import sageattention
     print(f"Sage Attention is found")
-except:
+except ImportError:
     sageattention = None
 
 @torch.compile(mode="max-autotune-no-cudagraphs", dynamic=True)
