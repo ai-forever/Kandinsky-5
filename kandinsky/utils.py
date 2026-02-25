@@ -58,7 +58,7 @@ def get_video_pipeline(
         local_rank, world_size = int(os.environ["LOCAL_RANK"]), int(
             os.environ["WORLD_SIZE"]
         )
-    except:
+    except (KeyError, ValueError):
         local_rank, world_size = 0, 1
 
     torch.cuda.set_device(local_rank)
@@ -174,7 +174,7 @@ def get_distributed_pipeline(
 ):
     try:
         world_size = int(os.environ["WORLD_SIZE"])
-    except:
+    except (KeyError, ValueError):
         world_size = 1
 
     if world_size > 1:
@@ -243,7 +243,7 @@ def _get_TI2I_params(
         local_rank, world_size = int(os.environ["LOCAL_RANK"]), int(
             os.environ["WORLD_SIZE"]
         )
-    except:
+    except (KeyError, ValueError):
         local_rank, world_size = 0, 1
 
     assert not (world_size > 1 and offload), "Offloading available only with not parallel inference"

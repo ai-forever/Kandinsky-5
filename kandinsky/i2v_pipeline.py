@@ -238,7 +238,7 @@ class Kandinsky5I2VPipeline:
                 with open(adapter_config, "r") as f:
                     adapter_config = json.load(f)
                 adapter_config = LoraConfig(**adapter_config)
-            except:
+            except (FileNotFoundError, json.JSONDecodeError, TypeError):
                 raise TypeError(f"adapter_config should be an instance of PeftConfig or a path to a json file.")
         self.peft_config[adapter_name] = adapter_config
 
