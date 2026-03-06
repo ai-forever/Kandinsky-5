@@ -4,8 +4,13 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn.attention.flex_attention import flex_attention
+from functools import partial
+from typing import Callable
 
-from .utils import get_freqs, nablaT_v2
+# Install from https://github.com/Dao-AILab/fast-hadamard-transform
+from fast_hadamard_transform import hadamard_transform
+
+from .utils import get_freqs, nablaT_v2, nablaT_v3
 from .attention import SelfAttentionEngine
 
 @torch.compile()
@@ -24,7 +29,6 @@ def apply_rotary(x, rope):
     x_ = x.reshape(*x.shape[:-1], -1, 1, 2).to(torch.float32)
     x_out = (rope * x_).sum(dim=-1)
     return x_out.reshape(*x.shape).to(torch.bfloat16)
-
 
 class TimeEmbeddings(nn.Module):
     def __init__(self, model_dim, time_dim, max_period=10000.0):
@@ -209,6 +213,7 @@ class MultiheadSelfAttentionEnc(nn.Module):
         out = self.out_l(out)
         return out
 
+    
 class MultiheadSelfAttentionDec(nn.Module):
     def __init__(self, num_channels, head_dim, attention_engine="auto"):
         super().__init__()
@@ -220,6 +225,10 @@ class MultiheadSelfAttentionDec(nn.Module):
         self.to_value = nn.Linear(num_channels, num_channels, bias=True)
         self.query_norm = nn.RMSNorm(head_dim)
         self.key_norm = nn.RMSNorm(head_dim)
+        signs = (torch.randint(0, 2, (1, 1, 1, head_dim), device="cuda") * 2 - 1).to(torch.bfloat16)
+        ip_scale = torch.tensor([1/ head_dim**0.5], dtype=torch.bfloat16, device="cuda")
+        self.register_buffer("ip_signs", signs, persistent=False)
+        self.register_buffer("ip_scale", ip_scale, persistent=False)
 
         self.out_layer = nn.Linear(num_channels, num_channels, bias=True)
 
@@ -244,11 +253,59 @@ class MultiheadSelfAttentionDec(nn.Module):
         return q, k
 
     @torch.compile()
-    def attention(self, query, key, value):
+    def _attention(self, query, key, value):
+        
         out = self.attn_engine.get_attention()(
             q=query,
             k=key,
-            v=value)[0].flatten(-2, -1)
+            v=value,
+        )[0].flatten(-2, -1)
+        
+        return out
+    
+    @torch.compile()
+    def attention(self, query, key, value):
+        base_dtype = query.dtype
+        q_n, q_s, q_h, q_d = query.shape
+        k_n, k_s, k_h, k_d = key.shape
+        v_n, v_s, v_h, v_d = value.shape
+
+        key -= key.mean(dim=1, keepdim=True)
+        v_mean = value.mean(dim=1, keepdim=True)
+        value -= v_mean
+
+        signs = self.ip_signs.to(device=query.device, dtype=query.dtype)
+        query = hadamard_transform(query * signs) * self.ip_scale
+        key   = hadamard_transform(key   * signs) * self.ip_scale
+        
+        # q_scale = torch.abs(query).amax((1, 3), keepdim=True).to(torch.float32)/torch.finfo(torch.float8_e4m3fn).max
+        # k_scale = torch.abs(key).amax((1, 3), keepdim=True).to(torch.float32)/torch.finfo(torch.float8_e4m3fn).max
+        # v_scale = torch.abs(value).amax((1, 3), keepdim=True).to(torch.float32)/torch.finfo(torch.float8_e4m3fn).max
+
+        q_scale = k_scale = v_scale = torch.ones((q_n,1,q_h,1), device=query.device, dtype=torch.float32)
+
+        query = query / q_scale.to(query.dtype)
+        key = key / k_scale.to(key.dtype)
+        value = value / v_scale.to(value.dtype)
+
+        query = query.to(torch.float8_e4m3fn)
+        key = key.to(torch.float8_e4m3fn)
+        value = value.to(torch.float8_e4m3fn)
+        
+        q_scale = q_scale.reshape((q_n, q_h))
+        k_scale = k_scale.reshape((k_n, k_h))
+        v_scale = v_scale.reshape((v_n, v_h))
+        
+        out = self.attn_engine.get_attention()(
+            q=query,
+            k=key,
+            v=value,
+            q_descale=q_scale,
+            k_descale=k_scale,
+            v_descale=v_scale
+        ) + v_mean
+        
+        out = out[0].flatten(-2, -1).to(base_dtype)
         return out
 
     @torch.compile(mode="max-autotune-no-cudagraphs", dynamic=True)
@@ -273,6 +330,48 @@ class MultiheadSelfAttentionDec(nn.Module):
             .contiguous()
         )
         out = out[0].flatten(-2, -1)
+        return out
+
+    @torch.compile(mode="max-autotune-no-cudagraphs", dynamic=True)
+    def nabla(self, query, key, value, sparse_params=None):
+        in_dtype = query.dtype
+        query = query.transpose(1, 2).contiguous()
+        key = key.transpose(1, 2).contiguous()
+        value = value.transpose(1, 2).contiguous()
+    
+        block_mask = nablaT_v3(
+            query,
+            key,
+            sparse_params["sta_mask"],
+            thr=sparse_params["P"],
+        )
+        
+        q_scale = torch.tensor(1, device=query.device, dtype=torch.bfloat16)
+        k_scale = torch.tensor(1, device=key.device, dtype=torch.bfloat16)
+        v_scale = torch.tensor(1, device=value.device, dtype=torch.bfloat16)
+        
+        def per_tensor_scaling(score, b, h, q_idx, k_idx, q_scale, k_scale):
+            return score.to(torch.float32) * q_scale * k_scale
+        
+        scale_func_partial = partial(per_tensor_scaling, q_scale=q_scale, k_scale=k_scale)
+        
+        query = query.to(torch.float8_e4m3fn)
+        key = key.to(torch.float8_e4m3fn)
+        value = value.to(torch.float8_e4m3fn)
+        
+        out = (
+            flex_attention(
+                query,
+                key,
+                value,
+                block_mask=block_mask,
+                score_mod=scale_func_partial
+            )
+            .transpose(1, 2)
+            .contiguous()
+        )
+        out = out[0].flatten(-2, -1).to(in_dtype)
+        out *= v_scale
         return out
 
     @torch.compile()

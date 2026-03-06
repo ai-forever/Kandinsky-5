@@ -161,3 +161,41 @@ def nablaT_v2(
     return BlockMask.from_kv_blocks(
         torch.zeros_like(kv_nb), kv_inds, kv_nb, kv_inds, BLOCK_SIZE=64, mask_mod=None
     )
+
+def nablaT_v3(
+    q: Tensor,
+    k: Tensor,
+    sta: Tensor,
+    thr: float = 0.9,
+) -> BlockMask:
+    # Map estimation
+    B, h, S, D = q.shape
+    s1 = S // 64
+    qa = q.reshape(B, h, s1, 64, D).mean(-2)
+    ka = k.reshape(B, h, s1, 64, D).mean(-2).transpose(-2, -1)
+    map = qa @ ka
+
+    map = torch.softmax(map / math.sqrt(D), dim=-1)
+    # Map binarization
+    vals, inds = map.sort(-1)
+    cvals = vals.cumsum_(-1)
+    mask = (cvals >= 1 - thr).int()
+    mask = mask.gather(-1, inds.argsort(-1))
+
+    mask = torch.logical_or(mask, sta)
+    
+    b, h, x, y = mask.shape
+    mask = mask.reshape(b, h, x//2, 2, y//2, 2) \
+               .permute(0, 1, 2, 4, 3, 5) \
+               .reshape(b, h, x//2, y//2, 4) \
+               .any(dim=-1)
+    # print(mask[0, 0, 0])
+    # print(mask.shape)
+    # sys.exit()
+
+    # BlockMask creation
+    kv_nb = mask.sum(-1).to(torch.int32)
+    kv_inds = mask.argsort(dim=-1, descending=True).to(torch.int32)
+    return BlockMask.from_kv_blocks(
+        torch.zeros_like(kv_nb), kv_inds, kv_nb, kv_inds, BLOCK_SIZE=128, mask_mod=None
+    )

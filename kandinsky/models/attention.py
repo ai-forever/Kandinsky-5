@@ -16,7 +16,7 @@ except:
 
 try:
     import sageattention
-    print(f"Sage Attention is found")
+    print(f"Sage Attention is found: {sageattention.sageattn}")
 except:
     sageattention = None
 
