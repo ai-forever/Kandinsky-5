@@ -101,8 +101,8 @@ def parallelize_dit(model, tp_mesh):
         parallelize_module(model.out_layer, tp_mesh, plan)
 
     return model
-  
-  
+
+
 def get_module_by_name(module, access_string):
     names = access_string.split('.')
     cur_m = module
@@ -226,6 +226,6 @@ def parallelize_seq(model, tp_mesh, mode='t2v'):
                         output_layouts=(Shard(1)),
                         desired_output_layouts=(Replicate())
                     ),
-                )        
+                )
 
     return model

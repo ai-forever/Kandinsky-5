@@ -10,7 +10,8 @@ from omegaconf.dictconfig import DictConfig
 
 from .models.dit import get_dit, TransformerDecoderBlock
 from .models.text_embedders import get_text_embedder
-from .models.vae import build_vae
+# from .models.vae import build_vae
+from .models.ctx_vae_v2 import build_vae
 from .models.parallelize import parallelize_dit, parallelize_seq
 from .i2v_pipeline import Kandinsky5I2VPipeline
 from .t2v_pipeline import Kandinsky5T2VPipeline
@@ -118,13 +119,13 @@ def get_video_pipeline(
     text_embedder = get_text_embedder(conf.model.text_embedder, device='cpu',
         quantized_qwen=quantized_qwen, text_token_padding=text_token_padding)
     
-    if not offload: 
-        text_embedder = text_embedder.to(device=device_map["text_embedder"]) 
+    if not offload:
+        text_embedder = text_embedder.to(device=device_map["text_embedder"])
 
     vae = build_vae(conf.model.vae)
     vae = vae.eval()
     if not offload:
-        vae = vae.to(device=device_map["vae"]) 
+        vae = vae.to(device=device_map["vae"])
 
     dit = get_dit(conf.model.dit_params, text_token_padding=text_token_padding)
 
@@ -153,7 +154,7 @@ def get_video_pipeline(
             conf=conf,
             offload=offload,
         )
-    
+
     elif mode == 'i2v':
         return Kandinsky5I2VPipeline(
             device_map=device_map,
@@ -200,8 +201,8 @@ def get_distributed_pipeline(
     if world_size > 1:
         from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard
         mp_policy = MixedPrecisionPolicy(
-            param_dtype=torch.bfloat16, 
-            reduce_dtype=torch.bfloat16, 
+            param_dtype=torch.bfloat16,
+            reduce_dtype=torch.bfloat16,
             output_dtype=torch.bfloat16
         )
 
@@ -212,6 +213,8 @@ def get_distributed_pipeline(
         fully_shard(pipeline.dit, mesh=dp_mesh, mp_policy=mp_policy)
 
         pipeline.dit = parallelize_seq(pipeline.dit, tp_mesh, mode)
+        if hasattr(pipeline.vae, "is_parallel") and hasattr(pipeline.vae, "set_parallel"):
+            pipeline.vae.set_parallel()
 
     return pipeline
 

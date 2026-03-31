@@ -326,7 +326,10 @@ def generate_sample(
             )
             images = images.to(device=vae_device)
             images = (images / vae.config.scaling_factor).permute(0, 4, 1, 2, 3)
-            images = vae.decode(images).sample
+            if tp_mesh and getattr(vae, "is_parallel", False):
+                images = vae.decode_parallel(images).sample
+            else:
+                images = vae.decode(images).sample
             images = ((images.clamp(-1.0, 1.0) + 1.0) * 127.5).to(torch.uint8)
 
     if offload:
