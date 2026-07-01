@@ -2,10 +2,9 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "False"
 
 import torch
-from torch.distributed import all_gather
-from tqdm import tqdm 
+from tqdm import tqdm
 
-from .models.utils import fast_sta_nabla
+from .models.utils import device_type_of, empty_device_cache, fast_sta_nabla
 import torchvision.transforms.functional as F
 
 
@@ -237,7 +236,7 @@ def generate_sample(
 ):
     bs, duration, height, width, dim = shape
 
-    g = torch.Generator(device="cuda")
+    g = torch.Generator(device=device)
     g.manual_seed(seed)
     img = torch.randn(bs * duration, height, width, dim, device=device, generator=g, dtype=torch.bfloat16)
 
@@ -275,7 +274,7 @@ def generate_sample(
         dit.to(device, non_blocking=True)
         
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(device), dtype=torch.bfloat16):
             latent_visual = generate(
                 dit,
                 device,
@@ -298,6 +297,11 @@ def generate_sample(
             )
             
     if tp_mesh:
+        # Only reached with real multi-GPU tensor parallelism - see the
+        # lazy-import comment in models/parallelize.py for why this isn't
+        # a top-level import.
+        from torch.distributed import all_gather
+
         tensor_list = [
         torch.zeros_like(latent_visual, device=latent_visual.device) for _ in range(tp_mesh["tensor_parallel"].size())
         ]
@@ -310,13 +314,13 @@ def generate_sample(
 
     if offload:
         dit = dit.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     if offload:
         vae = vae.to(vae_device, non_blocking=True)
 
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(vae_device), dtype=torch.bfloat16):
             images = latent_visual.reshape(
                 bs,
                 -1,
@@ -331,7 +335,7 @@ def generate_sample(
 
     if offload:
         vae = vae.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     return images
 
@@ -356,11 +360,11 @@ def generate_sample_ti2i(
     image=None
 ):
     bs, duration, height, width, dim = shape
-    
-    g = torch.Generator(device="cuda")
+
+    g = torch.Generator(device=device)
     g.manual_seed(seed)
     img = torch.randn(bs * duration, height, width, dim, device=device, generator=g, dtype=torch.bfloat16)
-    
+
     if duration == 1:
         if image is None:
             type_of_content = "image"
@@ -415,7 +419,7 @@ def generate_sample_ti2i(
         dit.to(device, non_blocking=True)
         
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(device), dtype=torch.bfloat16):
             latent_visual = generate(
                 dit,
                 device,
@@ -438,13 +442,13 @@ def generate_sample_ti2i(
             
     if offload:
         dit = dit.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     if offload:
         vae = vae.to(vae_device, non_blocking=True)
 
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(vae_device), dtype=torch.bfloat16):
             images = latent_visual.reshape(
                 bs,
                 -1,
@@ -461,7 +465,7 @@ def generate_sample_ti2i(
 
     if offload:
         vae = vae.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     return images
 
@@ -487,10 +491,10 @@ def generate_sample_i2v(
     text_embedder.embedder.mode = "i2v"
     bs, duration, height, width, dim = shape
 
-    g = torch.Generator(device="cuda")
+    g = torch.Generator(device=device)
     g.manual_seed(seed)
     img = torch.randn(bs * duration, height, width, dim, device=device, generator=g, dtype=torch.bfloat16)
-    
+
     if duration == 1:
         type_of_content = "image"
     else:
@@ -527,7 +531,7 @@ def generate_sample_i2v(
     first_frames = images
 
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(device), dtype=torch.bfloat16):
             latent_visual = generate(
                 dit,
                 device,
@@ -556,13 +560,13 @@ def generate_sample_i2v(
 
     if offload:
         dit = dit.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     if offload:
         vae = vae.to(vae_device, non_blocking=True)
 
     with torch.no_grad():
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        with torch.autocast(device_type=device_type_of(vae_device), dtype=torch.bfloat16):
             images = latent_visual.reshape(
                 bs,
                 -1,
@@ -577,6 +581,6 @@ def generate_sample_i2v(
 
     if offload:
         vae = vae.to('cpu', non_blocking=True)
-    torch.cuda.empty_cache()
+    empty_device_cache()
 
     return images

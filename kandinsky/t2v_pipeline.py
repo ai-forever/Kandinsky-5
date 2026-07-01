@@ -3,6 +3,7 @@ import logging
 import struct
 from typing import Optional, Union
 
+import imageio
 import transformers
 import torch
 from torch.distributed.device_mesh import DeviceMesh
@@ -12,6 +13,7 @@ from safetensors.torch import load_file
 from torchvision.transforms import ToPILImage
 
 from .generation_utils import generate_sample
+from .models.utils import empty_device_cache
 
 torch._dynamo.config.suppress_errors = True
 torch._dynamo.config.verbose = True
@@ -186,7 +188,7 @@ class Kandinsky5T2VPipeline:
             offload=self.offload,
             tp_mesh=self.device_mesh,
         )
-        torch.cuda.empty_cache()
+        empty_device_cache()
 
         if self.offload:
             self.text_embedder = self.text_embedder.to(device=self.device_map["text_embedder"])
@@ -210,12 +212,16 @@ class Kandinsky5T2VPipeline:
                         save_path = [save_path]
                     if len(save_path) == len(images):
                         for path, video in zip(save_path, images):
-                            torchvision.io.write_video(
-                                path,
-                                video.float().permute(1, 2, 3, 0).cpu().numpy(),
-                                fps=24,
-                                options={"crf": "5"},
-                            )
+                            # torchvision.io.write_video/read_video were
+                            # removed upstream (no longer present as of
+                            # torchvision 0.27+, including on main); imageio
+                            # (already a hard dependency, see
+                            # requirements.txt) is the still-supported
+                            # replacement for writing an mp4 from frames.
+                            frames = video.permute(1, 2, 3, 0).cpu().numpy().astype("uint8")
+                            with imageio.get_writer(path, fps=24, codec="libx264", output_params=["-crf", "5"]) as writer:
+                                for frame in frames:
+                                    writer.append_data(frame)
                 return images
 
     def load_adapter(self, adapter_config: Union[PeftConfig, str], adapter_path: Optional[str] = None,

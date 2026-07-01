@@ -61,7 +61,8 @@ def get_video_pipeline(
     except:
         local_rank, world_size = 0, 1
 
-    torch.cuda.set_device(local_rank)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(local_rank)
 
     assert not (world_size > 1 and offload), "Offloading available only with not parallel inference"
 

@@ -1,4 +1,5 @@
 import math
+import os
 
 import torch
 
@@ -16,6 +17,41 @@ def freeze(model):
     for p in model.parameters():
         p.requires_grad = False
     return model
+
+
+def get_free_device_memory() -> int:
+    """Best-effort free-memory estimate in bytes, used to size VAE tiling.
+    torch.cuda.mem_get_info() is CUDA-only; MPS and CPU don't expose a
+    dedicated VRAM pool (Apple Silicon uses unified system memory), so this
+    falls back to the closest available signal per backend."""
+    if torch.cuda.is_available():
+        return torch.cuda.mem_get_info()[0]
+    if torch.backends.mps.is_available():
+        return max(torch.mps.recommended_max_memory() - torch.mps.driver_allocated_memory(), 0)
+    try:
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
+    except (ValueError, AttributeError):
+        # sysconf isn't available on all platforms (e.g. Windows); fall back
+        # to a conservative estimate rather than crashing tiling selection.
+        return 4 * 1024**3
+
+
+def device_type_of(device) -> str:
+    """Returns the device_type string (e.g. 'cuda', 'mps', 'cpu') for use
+    with torch.autocast(device_type=...), from a device or device string
+    like 'cuda:0'."""
+    return torch.device(device).type
+
+
+def empty_device_cache() -> None:
+    """Device-agnostic replacement for torch.cuda.empty_cache(). Long video
+    generation benefits from actually reclaiming MPS's cache too, not just
+    silently no-op'ing there the way a bare torch.cuda.empty_cache() call
+    does when CUDA isn't available."""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    elif torch.backends.mps.is_available():
+        torch.mps.empty_cache()
 
 
 @torch.autocast(device_type="cuda", enabled=False)
