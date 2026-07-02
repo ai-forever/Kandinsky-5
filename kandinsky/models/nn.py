@@ -283,16 +283,27 @@ class MultiheadSelfAttentionDec(nn.Module):
             sparse_params["sta_mask"],
             thr=sparse_params["P"],
         )
-        out = (
-            flex_attention(
-                query,
-                key,
-                value,
-                block_mask=block_mask
+        # flex_attention has no registered AutocastMPS dispatch kernel (as of
+        # the PyTorch build this was tested against), so calling it inside
+        # an active MPS autocast region (generate_sample wraps the whole DiT
+        # forward in torch.autocast) raises:
+        #   NotImplementedError: could not find kernel for HigherOrderOperator
+        #   flex_attention at dispatch key DispatchKey.AutocastMPS
+        # Disabling autocast locally around just this call sidesteps the gap.
+        # This is a no-op on CUDA/CPU: query/key/value are already the
+        # target bf16 dtype here, so autocast wouldn't have changed anything
+        # for this op regardless of backend.
+        with torch.autocast(device_type=query.device.type, enabled=False):
+            out = (
+                flex_attention(
+                    query,
+                    key,
+                    value,
+                    block_mask=block_mask
+                )
+                .transpose(1, 2)
+                .contiguous()
             )
-            .transpose(1, 2)
-            .contiguous()
-        )
         out = out[0].flatten(-2, -1)
         return out
 
