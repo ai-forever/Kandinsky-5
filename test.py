@@ -162,6 +162,12 @@ def parse_args():
         default=None,
         help="GPUs num for tensor parallel",
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda:0",
+        help="Device to run inference on, e.g. cuda:0, mps, cpu",
+    )
     args = parser.parse_args()
 
     if args.hf_token:
@@ -172,7 +178,10 @@ def parse_args():
 
 def set_seed(seed=42):
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+    if torch.backends.mps.is_available():
+        torch.mps.manual_seed(seed)
 
 
 def get_generation_mode(config):
@@ -197,8 +206,8 @@ if __name__ == "__main__":
     validate_args(args)
 
     set_seed(args.seed)
-    device_map = {"dit": "cuda:0", "vae": "cuda:0",
-                  "text_embedder": "cuda:0"}
+    device_map = {"dit": args.device, "vae": args.device,
+                  "text_embedder": args.device}
     mode = get_generation_mode(args.config)
 
 

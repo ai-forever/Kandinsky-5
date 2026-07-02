@@ -17,6 +17,8 @@ from diffusers.models.autoencoders.vae import (
     DiagonalGaussianDistribution,
 )
 
+from .utils import empty_device_cache, get_free_device_memory
+
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 torch.backends.cudnn.allow_tf32 = True
@@ -117,7 +119,7 @@ class HunyuanVideoUpsampleCausal3D(nn.Module):
             hidden_states = torch.cat((first_frame, other_frames), dim=2)
             del first_frame
             del other_frames
-            torch.cuda.empty_cache()
+            empty_device_cache()
         else:
             hidden_states = first_frame
 
@@ -1169,7 +1171,7 @@ class AutoencoderKLHunyuanVideo(ModelMixin, ConfigMixin):
         """Returns optimal tiling for given shape."""
         h, w = shape[3:]
 
-        free_mem = torch.cuda.mem_get_info()[0]
+        free_mem = get_free_device_memory()
         max_area = free_mem / 256 / 17 / 8
         num_vals = 256 * 17 * (h + 32) * (w + 32) 
 

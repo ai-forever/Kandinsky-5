@@ -8,6 +8,7 @@ import transformers
 import torch
 from torchvision.transforms import ToPILImage
 from .generation_utils import generate_sample_ti2i
+from .models.utils import empty_device_cache
 from PIL import Image
 from torchvision.transforms.functional import pil_to_tensor
 from peft import PeftConfig, LoraConfig, inject_adapter_in_model, set_peft_model_state_dict
@@ -213,7 +214,7 @@ Rewrite Prompt: "{prompt}". Answer only with expanded prompt.""",
             image_vae=True,
             image=image
         )
-        torch.cuda.empty_cache()
+        empty_device_cache()
 
         if self.offload:
             self.text_embedder = self.text_embedder.to(device=self.device_map["text_embedder"])

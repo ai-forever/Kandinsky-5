@@ -1,16 +1,24 @@
-from torch.distributed._tensor import Replicate, Shard
-from torch.distributed.tensor.parallel import (
-    ColwiseParallel,
-    PrepareModuleInput,
-    PrepareModuleOutput,
-    RowwiseParallel,
-    SequenceParallel,
-    parallelize_module,
-)
+# Deferred: torch.distributed._tensor / tensor.parallel require the C
+# extension built with USE_DISTRIBUTED=1, which most non-CUDA (e.g. MPS)
+# and many single-GPU CUDA builds don't enable. Both functions below are
+# only ever exercised when tp_mesh.size() > 1 (real multi-GPU tensor
+# parallelism), so importing lazily lets single-device inference run on
+# builds that lack torch.distributed support, mirroring the existing
+# lazy `from torch.distributed.fsdp import ...` in get_distributed_pipeline.
 
 
 def parallelize_dit(model, tp_mesh):
     if tp_mesh.size() > 1:
+        from torch.distributed._tensor import Replicate, Shard
+        from torch.distributed.tensor.parallel import (
+            ColwiseParallel,
+            PrepareModuleInput,
+            PrepareModuleOutput,
+            RowwiseParallel,
+            SequenceParallel,
+            parallelize_module,
+        )
+
         plan = {
             "in_layer": ColwiseParallel(),
             "out_layer": RowwiseParallel(
@@ -114,6 +122,10 @@ def get_module_by_name(module, access_string):
   
   
 def update_plan_for_lora(root_module, plan):
+    # Only reached from parallelize_seq's tp_mesh.size() > 1 branch - see the
+    # module-level comment above parallelize_dit for why this is a local import.
+    from torch.distributed.tensor.parallel import PrepareModuleInput, PrepareModuleOutput
+
     new_plan = {}
 
     for key, val in plan.items():
@@ -137,6 +149,14 @@ def update_plan_for_lora(root_module, plan):
 
 def parallelize_seq(model, tp_mesh, mode='t2v'):
     if tp_mesh.size() > 1:
+        from torch.distributed._tensor import Replicate, Shard
+        from torch.distributed.tensor.parallel import (
+            PrepareModuleInput,
+            PrepareModuleOutput,
+            SequenceParallel,
+            parallelize_module,
+        )
+
         if mode != 'i2v':
             plan_in = {
                 "out_layer": PrepareModuleInput(

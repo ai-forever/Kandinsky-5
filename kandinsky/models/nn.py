@@ -9,13 +9,24 @@ from .utils import get_freqs, nablaT_v2
 from .attention import SelfAttentionEngine
 
 @torch.compile()
-@torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_scale_shift_norm(norm, x, scale, shift):
+    # Explicit fp32 upcast instead of torch.autocast(device_type="cuda", ...):
+    # autocast's fp32-target mode is CUDA-only (it silently no-ops on MPS and
+    # on CPU/CUDA when the accelerator isn't available), so relying on it here
+    # would drop this norm back to the input's native (bf16) precision on
+    # non-CUDA backends. Casting explicitly keeps the same numerics everywhere.
+    x = x.to(torch.float32)
+    scale = scale.to(torch.float32)
+    shift = shift.to(torch.float32)
     return (norm(x) * (scale + 1.0) + shift).to(torch.bfloat16)
 
 @torch.compile()
-@torch.autocast(device_type="cuda", dtype=torch.float32)
 def apply_gate_sum(x, out, gate):
+    # See apply_scale_shift_norm above for why this upcast is explicit rather
+    # than via torch.autocast(device_type="cuda", ...).
+    x = x.to(torch.float32)
+    out = out.to(torch.float32)
+    gate = gate.to(torch.float32)
     return (x + gate * out).to(torch.bfloat16)
 
 @torch.compile()
@@ -39,11 +50,19 @@ class TimeEmbeddings(nn.Module):
         self.activation = nn.SiLU()
         self.out_layer = nn.Linear(time_dim, time_dim, bias=True)
 
-    @torch.autocast(device_type="cuda", dtype=torch.float32)
     def forward(self, time):
-        args = torch.outer(time, self.freqs.to(device=time.device))
+        # Explicit fp32 upcast instead of torch.autocast(device_type="cuda", ...)
+        # - see apply_scale_shift_norm for why. in_layer/out_layer are called
+        # via F.linear on upcast copies of their weights so the matmuls run in
+        # fp32 (matching what CUDA autocast did) without permanently changing
+        # the stored (bf16) parameter dtype.
+        time = time.to(torch.float32)
+        freqs = self.freqs.to(device=time.device, dtype=torch.float32)
+        args = torch.outer(time, freqs)
         time_embed = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
-        time_embed = self.out_layer(self.activation(self.in_layer(time_embed)))
+        time_embed = F.linear(time_embed, self.in_layer.weight.float(), self.in_layer.bias.float())
+        time_embed = self.activation(time_embed)
+        time_embed = F.linear(time_embed, self.out_layer.weight.float(), self.out_layer.bias.float())
         return time_embed
 
 
@@ -145,9 +164,11 @@ class Modulation(nn.Module):
         self.out_layer.bias.data.zero_()
 
     @torch.compile()
-    @torch.autocast(device_type="cuda", dtype=torch.float32)
     def forward(self, x):
-        return self.out_layer(self.activation(x))
+        # Explicit fp32 upcast instead of torch.autocast(device_type="cuda", ...)
+        # - see apply_scale_shift_norm above for why.
+        x = self.activation(x.to(torch.float32))
+        return F.linear(x, self.out_layer.weight.float(), self.out_layer.bias.float())
 
 
 class MultiheadSelfAttentionEnc(nn.Module):
@@ -262,16 +283,27 @@ class MultiheadSelfAttentionDec(nn.Module):
             sparse_params["sta_mask"],
             thr=sparse_params["P"],
         )
-        out = (
-            flex_attention(
-                query,
-                key,
-                value,
-                block_mask=block_mask
+        # flex_attention has no registered AutocastMPS dispatch kernel (as of
+        # the PyTorch build this was tested against), so calling it inside
+        # an active MPS autocast region (generate_sample wraps the whole DiT
+        # forward in torch.autocast) raises:
+        #   NotImplementedError: could not find kernel for HigherOrderOperator
+        #   flex_attention at dispatch key DispatchKey.AutocastMPS
+        # Disabling autocast locally around just this call sidesteps the gap.
+        # This is a no-op on CUDA/CPU: query/key/value are already the
+        # target bf16 dtype here, so autocast wouldn't have changed anything
+        # for this op regardless of backend.
+        with torch.autocast(device_type=query.device.type, enabled=False):
+            out = (
+                flex_attention(
+                    query,
+                    key,
+                    value,
+                    block_mask=block_mask
+                )
+                .transpose(1, 2)
+                .contiguous()
             )
-            .transpose(1, 2)
-            .contiguous()
-        )
         out = out[0].flatten(-2, -1)
         return out
 
