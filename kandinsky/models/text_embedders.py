@@ -93,7 +93,7 @@ class Qwen2_5_VLTextEmbedder:
 
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             conf.checkpoint_path,
-            dtype=torch.bfloat16,
+            torch_dtype=torch.bfloat16,
             device_map=device,
             quantization_config=quantization_config
         )

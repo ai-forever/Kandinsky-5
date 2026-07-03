@@ -1,4 +1,5 @@
 import argparse
+import json
 import time
 import warnings
 import logging
@@ -124,6 +125,24 @@ def parse_args():
         default=1137,
         help="Seed for the random number generator"
     )
+    parser.add_argument(
+        "--condition_fps",
+        type=float,
+        default=None,
+        help="Global FPS condition for native I2V time adapter"
+    )
+    parser.add_argument(
+        "--output_fps",
+        type=float,
+        default=None,
+        help="FPS used when saving output video. Defaults to condition_fps for I2V time adapter runs."
+    )
+    parser.add_argument(
+        "--latent_time_path",
+        type=str,
+        default=None,
+        help="Path to JSON file with per-frame latent_time values for native I2V time adapter"
+    )
 
     parser.add_argument(
         "--offload",
@@ -176,7 +195,7 @@ def set_seed(seed=42):
 
 
 def get_generation_mode(config):
-    mode = None 
+    mode = None
 
     if "t2i" in config:
         mode = "t2i"
@@ -191,6 +210,23 @@ def get_generation_mode(config):
     return mode
 
 
+def load_latent_time(path):
+    if path is None:
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        values = json.load(f)
+    if not isinstance(values, list) or not values:
+        raise ValueError("latent_time JSON must be a non-empty list of numbers")
+    return [float(v) for v in values]
+
+
+def validate_time_adapter_args(args, mode):
+    if mode != "i2v" and any(
+        value is not None for value in (args.condition_fps, args.output_fps, args.latent_time_path)
+    ):
+        raise ValueError("--condition_fps, --output_fps and --latent_time_path are supported only for i2v configs")
+
+
 if __name__ == "__main__":
     disable_warnings()
     args = parse_args()
@@ -200,7 +236,8 @@ if __name__ == "__main__":
     device_map = {"dit": "cuda:0", "vae": "cuda:0",
                   "text_embedder": "cuda:0"}
     mode = get_generation_mode(args.config)
-
+    validate_time_adapter_args(args, mode)
+    latent_time = load_latent_time(args.latent_time_path)
 
     if mode == "t2i" or mode == "i2i":
         pipe = get_image_pipeline(
@@ -262,6 +299,10 @@ if __name__ == "__main__":
                  num_steps=args.sample_steps,
                  guidance_weight=args.guidance_weight,
                  scheduler_scale=args.scheduler_scale,
+                 condition_fps=args.condition_fps,
+                 output_fps=args.output_fps,
+                 latent_time=latent_time,
+                 negative_caption=args.negative_prompt,
                  expand_prompts=args.expand_prompt,
                  save_path=args.output_filename,
                  seed=args.seed)

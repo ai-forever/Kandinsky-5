@@ -37,6 +37,31 @@ def get_sparse_params(conf, batch_embeds, device):
 
     return sparse_params
 
+
+
+def build_time_conditions(duration, device, condition_fps=None, latent_time=None, temporal_compression_ratio=4):
+    if condition_fps is not None:
+        condition_fps = torch.tensor([float(condition_fps)], dtype=torch.float32, device=device)
+
+    if latent_time is not None:
+        if isinstance(latent_time, torch.Tensor):
+            latent_time = latent_time.flatten().to(device=device, dtype=torch.float32)
+        else:
+            latent_time = torch.tensor(latent_time, dtype=torch.float32, device=device).flatten()
+        if latent_time.numel() != duration:
+            raise ValueError(
+                f"latent_time must have {duration} values for this sample, got {latent_time.numel()}"
+            )
+        return condition_fps, latent_time
+
+    if condition_fps is None:
+        return None, None
+
+    latent_time = torch.zeros(duration, dtype=torch.float32, device=device)
+    if duration > 1:
+        latent_time[1:] = (1.0 + temporal_compression_ratio * torch.arange(duration - 1, dtype=torch.float32, device=device)) / float(condition_fps.item())
+    return condition_fps, latent_time
+
 def adaptive_mean_std_normalization(source, reference):
     source_mean = source.mean(dim=(1,2,3),keepdim=True)
     source_std = source.std(dim=(1,2,3),keepdim=True)
@@ -93,6 +118,8 @@ def get_velocity(
     sparse_params=None,
     attention_mask=None,
     null_attention_mask=None,
+    condition_fps=None,
+    latent_time=None,
 ):
     with torch._dynamo.utils.disable_cache_limit():
         pred_velocity = dit(
@@ -105,6 +132,8 @@ def get_velocity(
             scale_factor=conf.metrics.scale_factor,
             sparse_params=sparse_params,
             attention_mask=attention_mask,
+            condition_fps=condition_fps,
+            latent_time=latent_time,
         )
         if abs(guidance_weight - 1.0) > 1e-6:
             uncond_pred_velocity = dit(
@@ -117,6 +146,8 @@ def get_velocity(
                 scale_factor=conf.metrics.scale_factor,
                 sparse_params=sparse_params,
                 attention_mask=null_attention_mask,
+                condition_fps=condition_fps,
+                latent_time=latent_time,
             )
             pred_velocity = uncond_pred_velocity + guidance_weight * (
                 pred_velocity - uncond_pred_velocity
@@ -144,6 +175,8 @@ def generate(
     tp_mesh=None,
     attention_mask=None,
     null_attention_mask=None,
+    condition_fps=None,
+    latent_time=None,
 ):
     sparse_params = get_sparse_params(conf, {"visual": img}, device)
     timesteps = torch.linspace(1, 0, num_steps + 1, device=device)
@@ -182,6 +215,8 @@ def generate(
             sparse_params=sparse_params,
             attention_mask=attention_mask,
             null_attention_mask=null_attention_mask,
+            condition_fps=condition_fps,
+            latent_time=latent_time,
         )
         img[..., :pred_velocity.shape[-1]] += timestep_diff * pred_velocity
         # NOTE: remove extra channels that can be added in Image Editing (I2I)
@@ -234,6 +269,8 @@ def generate_sample(
     progress=True,
     offload=False,
     tp_mesh=None,
+    condition_fps=None,
+    latent_time=None,
 ):
     bs, duration, height, width, dim = shape
 
@@ -262,6 +299,10 @@ def generate_sample(
         bs_null_text_embed[key] = bs_null_text_embed[key].to(device=device)
     text_cu_seqlens = text_cu_seqlens.to(device=device)[-1].item()
     null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)[-1].item()
+
+    condition_fps, latent_time = build_time_conditions(
+        duration, device, condition_fps=condition_fps, latent_time=latent_time
+    )
 
     visual_rope_pos = [
         torch.arange(duration),
@@ -295,6 +336,8 @@ def generate_sample(
                 tp_mesh=tp_mesh,
                 attention_mask=attention_mask,
                 null_attention_mask=null_attention_mask,
+                condition_fps=condition_fps,
+                latent_time=latent_time,
             )
             
     if tp_mesh:
@@ -403,6 +446,8 @@ def generate_sample_ti2i(
     text_cu_seqlens = text_cu_seqlens.to(device=device)[-1].item()
     null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)[-1].item()
 
+    condition_fps, latent_time = build_time_conditions(duration, device, condition_fps=condition_fps, latent_time=latent_time)
+
     visual_rope_pos = [
         torch.arange(duration),
         torch.arange(shape[-3] // conf.model.dit_params.patch_size[1]),
@@ -482,7 +527,9 @@ def generate_sample_i2v(
     vae_device="cuda",
     progress=True,
     offload=False,
-    tp_mesh=None
+    tp_mesh=None,
+    condition_fps=None,
+    latent_time=None,
 ):
     text_embedder.embedder.mode = "i2v"
     bs, duration, height, width, dim = shape
@@ -490,12 +537,12 @@ def generate_sample_i2v(
     g = torch.Generator(device="cuda")
     g.manual_seed(seed)
     img = torch.randn(bs * duration, height, width, dim, device=device, generator=g, dtype=torch.bfloat16)
-    
+
     if duration == 1:
         type_of_content = "image"
     else:
         type_of_content = "video"
-        
+
     with torch.no_grad():
         bs_text_embed, text_cu_seqlens, attention_mask = text_embedder.encode(
             [caption], type_of_content=type_of_content
@@ -506,12 +553,16 @@ def generate_sample_i2v(
 
     if offload:
         text_embedder = text_embedder.to('cpu')
-        
+
     for key in bs_text_embed:
         bs_text_embed[key] = bs_text_embed[key].to(device=device)
         bs_null_text_embed[key] = bs_null_text_embed[key].to(device=device)
     text_cu_seqlens = text_cu_seqlens.to(device=device)[-1].item()
     null_text_cu_seqlens = null_text_cu_seqlens.to(device=device)[-1].item()
+
+    condition_fps, latent_time = build_time_conditions(
+        duration, device, condition_fps=condition_fps, latent_time=latent_time
+    )
 
     visual_rope_pos = [
         torch.arange(duration),
@@ -547,7 +598,21 @@ def generate_sample_i2v(
                 tp_mesh=tp_mesh,
                 attention_mask=attention_mask,
                 null_attention_mask=null_attention_mask,
+                condition_fps=condition_fps,
+                latent_time=latent_time,
             )
+
+    if tp_mesh:
+        tensor_list = [
+            torch.zeros_like(latent_visual, device=latent_visual.device)
+            for _ in range(tp_mesh["tensor_parallel"].size())
+        ]
+        all_gather(
+            tensor_list,
+            latent_visual.contiguous(),
+            group=tp_mesh.get_group(mesh_dim="tensor_parallel")
+        )
+        latent_visual = torch.cat(tensor_list, dim=1)
 
     if images is not None:
         images = images.to(device=latent_visual.device, dtype=latent_visual.dtype)

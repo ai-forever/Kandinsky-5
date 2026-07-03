@@ -1,7 +1,7 @@
 import json
 import logging
 import struct
-from math import floor, sqrt
+from math import sqrt
 from typing import Union, Optional
 
 import transformers
@@ -19,7 +19,6 @@ from .generation_utils import generate_sample_i2v
 torch._dynamo.config.suppress_errors = True
 torch._dynamo.config.verbose = True
 
-
 def resize_image(image, max_area, divisibility=16, world_size=1):
     h, w = image.shape[2:]
     area = h * w
@@ -34,6 +33,7 @@ def resize_image(image, max_area, divisibility=16, world_size=1):
     new_h = int(round(h * k) * divisibility)
     new_w = int(round(w * k) * divisibility)
     return F.resize(image, (new_h, new_w)), k
+
 
 def get_first_frame_from_image(
     image, vae, device, max_area, divisibility, world_size,
@@ -122,6 +122,9 @@ class Kandinsky5I2VPipeline:
         num_steps: int = None,
         guidance_weight: float = None,
         scheduler_scale: float = 10.0,
+        condition_fps: float = None,
+        output_fps: float = None,
+        latent_time = None,
         negative_caption: str = "Static, 2D cartoon, cartoon, 2d animation, paintings, images, worst quality, low quality, ugly, deformed, walking backwards",
         expand_prompts: bool = True,
         save_path: str = None,
@@ -129,6 +132,8 @@ class Kandinsky5I2VPipeline:
     ):
         num_steps = self.num_steps if num_steps is None else num_steps
         guidance_weight = self.guidance_weight if guidance_weight is None else guidance_weight
+        output_fps = (condition_fps if output_fps is None and condition_fps is not None else output_fps)
+        output_fps = 24.0 if output_fps is None else float(output_fps)
         # SEED
         if seed is None:
             if self.local_dit_rank == 0:
@@ -169,6 +174,12 @@ class Kandinsky5I2VPipeline:
         height, width = image_lat.shape[1:3]
         shape = (1, num_frames, height, width, 16)
 
+        if condition_fps is not None or latent_time is not None:
+            self.dit.enable_time_adapter(
+                use_condition_fps=condition_fps is not None,
+                use_latent_time=latent_time is not None,
+            )
+
         # GENERATION
         images = generate_sample_i2v(
             shape,
@@ -188,6 +199,8 @@ class Kandinsky5I2VPipeline:
             progress=progress,
             offload=self.offload,
             tp_mesh=self.device_mesh,
+            condition_fps=condition_fps,
+            latent_time=latent_time,
         )
         torch.cuda.empty_cache()
 
@@ -220,7 +233,7 @@ class Kandinsky5I2VPipeline:
                             torchvision.io.write_video(
                                 path,
                                 video.float().permute(1, 2, 3, 0).cpu().numpy(),
-                                fps=24,
+                                fps=float(output_fps),
                                 options={"crf": "5"},
                             )
                 return images

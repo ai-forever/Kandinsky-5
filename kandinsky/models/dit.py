@@ -96,7 +96,9 @@ class DiffusionTransformer3D(nn.Module):
         visual_cond=False,
         attention_engine="auto",
         instruct_type=None,
-        text_token_padding=False
+        text_token_padding=False,
+        use_condition_fps=False,
+        use_latent_time=False,
     ):
         super().__init__()
         self.instruct_type = instruct_type
@@ -106,9 +108,19 @@ class DiffusionTransformer3D(nn.Module):
         self.patch_size = patch_size
         self.visual_cond = visual_cond
         self.text_token_padding = text_token_padding
+        self.use_condition_fps = bool(use_condition_fps)
+        self.use_latent_time = bool(use_latent_time)
 
         visual_embed_dim = 2 * in_visual_dim + 1 if visual_cond or instruct_type=='channel' else in_visual_dim
         self.time_embeddings = TimeEmbeddings(model_dim, time_dim)
+        if self.use_condition_fps:
+            self.fps_embeddings = TimeEmbeddings(model_dim, time_dim)
+            self.fps_embeddings.out_layer.weight.data.zero_()
+            self.fps_embeddings.out_layer.bias.data.zero_()
+        if self.use_latent_time:
+            self.latent_time_embeddings = TimeEmbeddings(model_dim, model_dim)
+            self.latent_time_embeddings.out_layer.weight.data.zero_()
+            self.latent_time_embeddings.out_layer.bias.data.zero_()
         self.text_embeddings = TextEmbeddings(in_text_dim, model_dim)
         self.pooled_text_embeddings = TextEmbeddings(in_text_dim2, time_dim)
         self.visual_embeddings = VisualEmbeddings(visual_embed_dim, model_dim, patch_size)
@@ -131,13 +143,39 @@ class DiffusionTransformer3D(nn.Module):
 
         self.out_layer = OutLayer(model_dim, time_dim, out_visual_dim, patch_size)
 
+    def enable_time_adapter(self, use_condition_fps=False, use_latent_time=False):
+        use_condition_fps = bool(use_condition_fps)
+        use_latent_time = bool(use_latent_time)
+        if use_condition_fps and not self.use_condition_fps:
+            self.fps_embeddings = TimeEmbeddings(self.model_dim, self.time_embeddings.out_layer.out_features)
+            self.fps_embeddings.out_layer.weight.data.zero_()
+            self.fps_embeddings.out_layer.bias.data.zero_()
+            self.use_condition_fps = True
+        if use_latent_time and not self.use_latent_time:
+            self.latent_time_embeddings = TimeEmbeddings(self.model_dim, self.model_dim)
+            self.latent_time_embeddings.out_layer.weight.data.zero_()
+            self.latent_time_embeddings.out_layer.bias.data.zero_()
+            self.use_latent_time = True
+
     #@torch.compile()
-    def before_text_transformer_blocks(self, text_embed, time, pooled_text_embed, x,
-                                       text_rope_pos):
+    def before_text_transformer_blocks(
+        self,
+        text_embed,
+        time,
+        pooled_text_embed,
+        x,
+        text_rope_pos,
+        condition_fps=None,
+        latent_time=None,
+    ):
         text_embed = self.text_embeddings(text_embed)
         time_embed = self.time_embeddings(time)
         time_embed = time_embed + self.pooled_text_embeddings(pooled_text_embed)
         visual_embed = self.visual_embeddings(x)
+        if condition_fps is not None and self.use_condition_fps:
+            time_embed = time_embed + self.fps_embeddings(condition_fps)
+        if latent_time is not None and self.use_latent_time:
+            visual_embed = visual_embed + self.latent_time_embeddings(latent_time)[:, None, None, :]
         text_rope = self.text_rope_embeddings(text_rope_pos)
         return text_embed, time_embed, text_rope, visual_embed
 
@@ -164,12 +202,21 @@ class DiffusionTransformer3D(nn.Module):
         time,
         visual_rope_pos,
         text_rope_pos,
+        condition_fps=None,
+        latent_time=None,
         scale_factor=(1.0, 1.0, 1.0),
         sparse_params=None,
         attention_mask=None
     ):
         text_embed, time_embed, text_rope, visual_embed = self.before_text_transformer_blocks(
-            text_embed, time, pooled_text_embed, x, text_rope_pos)
+            text_embed,
+            time,
+            pooled_text_embed,
+            x,
+            text_rope_pos,
+            condition_fps=condition_fps,
+            latent_time=latent_time,
+        )
 
         for text_transformer_block in self.text_transformer_blocks:
             text_embed = text_transformer_block(text_embed, time_embed, text_rope, attention_mask)
