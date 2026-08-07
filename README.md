@@ -48,14 +48,6 @@ If your research or project builds upon Kandinsky 5, and you would like more peo
 6. [Kandinsky WM 1.0](#kandinsky-wm-10)
 7. [Quickstart & Run examples](#quickstart)
 
-## Kandinsky Time Adapter
-
-[Kandinsky Time Adapter](https://github.com/kandinskylab/kandinsky-5/blob/time_adapter/TIME_ADAPTER_README.md) adds FPS-conditioned motion control to Kandinsky 5.0 I2V Lite. The implementation and instructions are available in the separate `time_adapter` branch.
-
-## Kandinsky WM 1.0
-
-[Kandinsky WM 1.0](https://github.com/kandinskylab/kandinsky-wm) is a family of image-to-video models for Physical AI, covering autonomous driving, robotics, and general physics. The models and instructions are available in a separate repository.
-
 
 ## Kandinsky 5.0 Video Pro
 
@@ -481,6 +473,14 @@ the same dog.
       </td>
 </table>
 
+
+## Kandinsky Time Adapter
+
+[Kandinsky Time Adapter](https://github.com/kandinskylab/kandinsky-5/blob/time_adapter/TIME_ADAPTER_README.md) adds FPS-conditioned motion control to Kandinsky 5.0 I2V Lite. The implementation and instructions are available in the separate `time_adapter` branch.
+
+## Kandinsky WM 1.0
+
+[Kandinsky WM 1.0](https://github.com/kandinskylab/kandinsky-wm) is a family of image-to-video models for Physical AI, covering autonomous driving, robotics, and general physics. The models and instructions are available in a separate repository.
 
 ## Quickstart
 
