@@ -21,6 +21,7 @@ https://github.com/user-attachments/assets/b06f56de-1b05-4def-a611-1a3159ed71b0
 
 
 ## Project Updates
+- 🔥 ```2026/08/07```: [Kandinsky Time Adapter](https://github.com/kandinskylab/kandinsky-5/blob/time_adapter/TIME_ADAPTER_README.md) and [Kandinsky WM 1.0](https://github.com/kandinskylab/kandinsky-wm) are open-sourced.
 - 🔥 ```2025/12/12```: Kandinsky 5.0 Video Pro is ranked as Top-1 open-source Text-to-Video model at [LMArena](https://lmarena.ai/leaderboard/text-to-video).
 - 🔥 ```2025/12/03```: our Kandinsky 5.0 Video Pro and Image Lite models are [accepted to diffusers](https://github.com/huggingface/diffusers/commit/d0c54e5563c3245b57d2b374e8e334da77305c05)
 - 🔥 ```2025/11/26```: our simplified LoRa training is available on [kandinsky-5-lora-train](https://github.com/kandinskylab/kandinsky-5-lora-train)
@@ -43,7 +44,9 @@ If your research or project builds upon Kandinsky 5, and you would like more peo
 2. [Kandinsky 5.0 Video Lite](#kandinsky-50-video-lite)
 3. [Kandinsky 5.0 Image Lite](#kandinsky-50-image-lite)
 4. [Kandinsky 5.0 Image Editing](#kandinsky-50-image-editing)
-5. [Quickstart & Run examples](#quickstart)
+5. [Kandinsky Time Adapter](#kandinsky-time-adapter)
+6. [Kandinsky WM 1.0](#kandinsky-wm-10)
+7. [Quickstart & Run examples](#quickstart)
 
 
 ## Kandinsky 5.0 Video Pro
@@ -471,6 +474,14 @@ the same dog.
 </table>
 
 
+## Kandinsky Time Adapter
+
+[Kandinsky Time Adapter](https://github.com/kandinskylab/kandinsky-5/blob/time_adapter/TIME_ADAPTER_README.md) adds FPS-conditioned motion control to Kandinsky 5.0 I2V Lite. The implementation and instructions are available in the separate `time_adapter` branch.
+
+## Kandinsky WM 1.0
+
+[Kandinsky WM 1.0](https://github.com/kandinskylab/kandinsky-wm) is a family of image-to-video models for Physical AI, covering autonomous driving, robotics, and general physics. The models and instructions are available in a separate repository.
+
 ## Quickstart
 
 #### Installation
@@ -696,7 +707,7 @@ You can apply to participate in the beta testing of the Kandinsky Video Lite via
       - [ ] rl
       - [ ] distil 16 steps
       - [x] I2V
-  - [ ] ComfyUI integration
+  - [x] ComfyUI integration
   - [ ] Diffusers integration
   - [x] Caching acceleration support
   - [x] Multi-GPU Inference code of the models
@@ -717,7 +728,7 @@ You can apply to participate in the beta testing of the Kandinsky Video Lite via
   - [x] Checkpoints
       - [x] rl
       - [x] pretrain
-  - [ ] ComfyUI integration
+  - [x] ComfyUI integration
   - [ ] Diffusers integration
   - [x] Caching acceleration support
   - [x] Multi-GPU Inference code of the models
